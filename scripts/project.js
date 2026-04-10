@@ -1203,11 +1203,11 @@ function renderTimeline() {
 
   tasks.forEach(task => {
     const d = parseDueDate(task.dueDate);
-    if (d) datedItems.push({ type: 'task', obj: task, date: d });
+    if (d) datedItems.push({ type: 'task', obj: task, date: d, taskId: task.id });
     else   undatedItems.push({ type: 'task', obj: task });
     (task.subItems || []).forEach(sub => {
       const sd = parseDueDate(sub.dueDate);
-      if (sd) datedItems.push({ type: 'subtask', obj: sub, date: sd });
+      if (sd) datedItems.push({ type: 'subtask', obj: sub, date: sd, parentId: task.id });
       else    undatedItems.push({ type: 'subtask', obj: sub });
     });
   });
@@ -1247,7 +1247,7 @@ function renderTimeline() {
 
   const STEM_BASE  = 40; // minimum stem height in px
   const LEVEL_STEP = 78; // additional px per level
-  const LABEL_H    = 46; // approximate label height in px
+  const LABEL_H    = 52; // approximate label height in px (taller to account for border+padding)
   const EDGE_PAD   = 28; // breathing room above/below the outermost labels
 
   const placements = computePlacements(datedItems, dateToPct, trackW);
@@ -1307,10 +1307,20 @@ function renderTimeline() {
 
   // ── Place pins using computed collision-free positions ────────────────────────
 
-  const allAnimPins = [];
+  const allAnimPins  = [];
+  const taskPcts     = {};  // taskId -> pct for dated parent tasks
+  const subGroupPcts = {};  // parentTaskId -> [pct, ...] for visible dated subtasks
 
   placements.forEach(({ item, pct, side, level }) => {
     if (pct < -30 || pct > 130) return; // skip items outside visible viewport
+
+    // Collect positions for connector lines
+    if (item.type === 'task' && item.taskId) {
+      taskPcts[item.taskId] = pct;
+    } else if (item.type === 'subtask' && item.parentId) {
+      if (!subGroupPcts[item.parentId]) subGroupPcts[item.parentId] = [];
+      subGroupPcts[item.parentId].push(pct);
+    }
 
     const stemH = STEM_BASE + level * LEVEL_STEP;
     const pin   = buildPin({
@@ -1327,6 +1337,41 @@ function renderTimeline() {
     track.appendChild(pin);
     allAnimPins.push({ el: pin, pct });
   });
+
+  // ── Dotted connector lines linking each parent task to its dated sub-tasks ────
+
+  // Only draw when there are subtask groups to connect
+  if (Object.keys(subGroupPcts).length > 0) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', String(trackH));
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible';
+
+    Object.entries(subGroupPcts).forEach(([parentId, subPcts]) => {
+      // Include the parent task dot in the span if it's visible on screen
+      const parentPct = taskPcts[parentId];
+      const allPcts   = parentPct != null ? [parentPct, ...subPcts] : subPcts;
+      if (allPcts.length < 2) return; // nothing to connect
+
+      const minPct = Math.min(...allPcts);
+      const maxPct = Math.max(...allPcts);
+
+      // Horizontal dotted line at baseline level spanning the whole group
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', minPct + '%');
+      line.setAttribute('y1', String(baselineY + 2)); // center on the 5px baseline
+      line.setAttribute('x2', maxPct + '%');
+      line.setAttribute('y2', String(baselineY + 2));
+      line.style.stroke          = 'var(--text-primary)';
+      line.style.strokeWidth     = '1.5';
+      line.style.strokeDasharray = '5 4';
+      line.style.opacity         = '0.45';
+      svg.appendChild(line);
+    });
+
+    // Insert before all other children so it renders behind pins and baseline
+    track.insertBefore(svg, track.firstChild);
+  }
 
   // ── Undated items listed below the track ─────────────────────────────────────
 

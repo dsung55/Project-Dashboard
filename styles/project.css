@@ -922,11 +922,19 @@
 
 /* Label — position (top/bottom offset) is set inline by JS */
 .tl-pin-label {
-  position:   absolute;
-  left:       50%;
-  transform:  translateX(-50%);
-  text-align: center;
-  width:      120px;
+  position:      absolute;
+  left:          50%;
+  transform:     translateX(-50%);
+  text-align:    center;
+  width:         124px;
+  background:    var(--bg-primary);
+  border:        1px solid rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  padding:       5px 8px;
+}
+
+[data-theme="dark"] .tl-pin-label {
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 /* Fallback label positions — overridden by inline styles from buildPin */
