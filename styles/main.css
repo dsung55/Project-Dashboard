@@ -1,0 +1,930 @@
+/* ── Design tokens ───────────────────────────────────────────────────────────── */
+:root {
+  --bg-primary:         #FFFFFF;
+  --bg-secondary:       #F5F5F7;
+  --bg-secondary-hover: #E8E8EC;
+  --text-primary:       #1D1D1F;
+  --text-secondary:     #6E6E73;
+  --border-color:       #E0E0E0;
+  --radius:             12px;
+  --shadow-hover:       0 4px 16px rgba(0, 0, 0, 0.10);
+  --transition:         150ms ease;
+  --font:               -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sidebar-width:      220px;
+  --green:              #34C759;
+  --red:                #FF3B30;
+  --blue:               #007AFF;
+}
+
+/* Dark theme token overrides — applied when data-theme="dark" is on <html> */
+[data-theme="dark"] {
+  --bg-primary:         #1C1C1E;
+  --bg-secondary:       #2C2C2E;
+  --bg-secondary-hover: #3A3A3C;
+  --text-primary:       #F5F5F7;
+  --text-secondary:     #8E8E93;
+  --border-color:       #3A3A3C;
+  --shadow-hover:       0 4px 16px rgba(0, 0, 0, 0.40);
+}
+
+/* Dark mode: box fills — keep borders visible, soften the background fill */
+[data-theme="dark"] .page-header,
+[data-theme="dark"] .project-section {
+  background: #212123;
+}
+
+/* Dark mode: primary button — black background, white text for clear visibility */
+[data-theme="dark"] .btn-primary {
+  background: #000000;
+  color:      #FFFFFF;
+}
+
+/* Dark mode: sidebar nav hover/active — rgba(0,0,0,...) is invisible on dark */
+[data-theme="dark"] .sidebar-nav li a:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+[data-theme="dark"] .sidebar-nav li a.active {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+/* Dark mode: ghost and card-menu hover buttons */
+[data-theme="dark"] .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+[data-theme="dark"] .btn-card-menu:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Dark mode: card version badge */
+[data-theme="dark"] .project-card-version {
+  background: #3A3A3C;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background:  var(--bg-primary);
+  color:       var(--text-primary);
+  font-size:   15px;
+  line-height: 1.5;
+  min-height:  100vh;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+.sidebar {
+  position:   fixed;
+  top:        0;
+  left:       0;
+  width:      var(--sidebar-width);
+  height:     100vh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display:    flex;
+  flex-direction: column;
+  padding:    32px 0 24px;
+  z-index:    100;
+}
+
+.sidebar-logo {
+  font-size:   17px;
+  font-weight: 700;
+  color:       var(--text-primary);
+  padding:     0 24px 28px;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-nav {
+  list-style: none;
+  flex: 1;
+}
+
+.sidebar-nav li a {
+  display:     block;
+  padding:     10px 24px;
+  color:       var(--text-secondary);
+  text-decoration: none;
+  font-size:   14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border:      1px solid var(--border-color);
+  margin:      2px 12px;
+  transition:  background var(--transition), color var(--transition);
+}
+
+.sidebar-nav li a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color:      var(--text-primary);
+}
+
+.sidebar-nav li a.active {
+  background: rgba(0, 0, 0, 0.07);
+  color:      var(--text-primary);
+  font-weight: 600;
+}
+
+/* ── Main content ────────────────────────────────────────────────────────────── */
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex:        1;
+  padding:     48px 48px 64px;
+  max-width:   1200px;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────────── */
+.page-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  margin-bottom:   24px;
+  border:          1px solid var(--border-color);
+  border-radius:   var(--radius);
+  padding:         16px 24px;
+  background:      #FAFAFA;
+}
+
+.page-title {
+  font-size:   28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color:       var(--text-primary);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────────── */
+.btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           6px;
+  padding:       8px 18px;
+  border-radius: 8px;
+  border:        none;
+  font-family:   var(--font);
+  font-size:     14px;
+  font-weight:   500;
+  cursor:        pointer;
+  transition:    background var(--transition), opacity var(--transition);
+  white-space:   nowrap;
+}
+
+.btn-primary {
+  background: var(--text-primary);
+  color:      #FFFFFF;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color:      var(--text-primary);
+  border:     1px solid var(--border-color);
+}
+
+.btn-secondary:hover { background: var(--bg-secondary-hover); }
+
+.btn-danger {
+  background: var(--red);
+  color:      #FFFFFF;
+}
+
+.btn-danger:hover { opacity: 0.85; }
+
+.btn-ghost {
+  background: transparent;
+  color:      var(--text-secondary);
+  padding:    6px 10px;
+}
+
+.btn-ghost:hover {
+  background: rgba(0,0,0,0.05);
+  color:      var(--text-primary);
+}
+
+/* ── Section heading ─────────────────────────────────────────────────────────── */
+.section-heading {
+  font-size:     12px;
+  font-weight:   600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color:         var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────────── */
+.search-input {
+  width:         100%;
+  padding:       10px 14px;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  font-family:   var(--font);
+  font-size:     14px;
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
+  transition:    border-color var(--transition), box-shadow var(--transition);
+  outline:       none;
+  margin-bottom: 24px;
+}
+
+.search-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+/* ── Project grid ────────────────────────────────────────────────────────────── */
+.project-section {
+  margin-bottom:  24px;
+  border:         1px solid var(--border-color);
+  border-radius:  var(--radius);
+  padding:        24px 24px 20px;
+  background:     #FAFAFA;
+}
+
+.project-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap:                   16px;
+}
+
+/* Empty state text */
+.empty-state {
+  color:       var(--text-secondary);
+  font-size:   14px;
+  padding:     16px 0;
+}
+
+/* ── Project card ────────────────────────────────────────────────────────────── */
+.project-card {
+  background:    var(--bg-primary);
+  border:        1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding:       20px 20px 16px;
+  cursor:        pointer;
+  transition:    box-shadow var(--transition), transform var(--transition);
+  border-left:   4px solid var(--project-color, #4A90D9);
+  position:      relative;
+  display:       flex;
+  flex-direction: column;
+  gap:           10px;
+}
+
+.project-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform:  translateY(-1px);
+}
+
+.project-card-header {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     flex-start;
+  gap:             8px;
+}
+
+/* Right side of card header — stacks version badge and color dot vertically */
+.project-card-header-right {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-end;
+  gap:            6px;
+  flex-shrink:    0;
+}
+
+/* Clickable color dot on dashboard cards */
+.card-color-btn {
+  width:         14px;
+  height:        14px;
+  border-radius: 50%;
+  border:        2px solid rgba(0, 0, 0, 0.12);
+  cursor:        pointer;
+  padding:       0;
+  transition:    transform var(--transition), box-shadow var(--transition);
+}
+
+.card-color-btn:hover {
+  transform:  scale(1.25);
+  box-shadow: 0 0 0 2px var(--border-color);
+}
+
+[data-theme="dark"] .card-color-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.project-card-name {
+  font-size:   19px;
+  font-weight: 700;
+  color:       var(--text-primary);
+  line-height: 1.3;
+}
+
+.project-card-version {
+  font-size:     12px;
+  font-weight:   500;
+  color:         var(--text-secondary);
+  background:    var(--bg-secondary);
+  border-radius: 6px;
+  padding:       2px 8px;
+  white-space:   nowrap;
+  flex-shrink:   0;
+}
+
+.project-card-phase {
+  font-size:  13px;
+  color:      var(--text-secondary);
+}
+
+/* Current task label on card */
+.card-current-task {
+  font-size:     12px;
+  color:         var(--text-secondary);
+  white-space:   nowrap;
+  overflow:      hidden;
+  text-overflow: ellipsis;
+  min-height:    17px;
+}
+
+/* Card footer row containing the 3-dot menu */
+.card-footer {
+  display:         flex;
+  justify-content: flex-end;
+  margin-top:      auto;
+}
+
+/* 3-dot menu button */
+.btn-card-menu {
+  background:     transparent;
+  border:         none;
+  cursor:         pointer;
+  font-size:      20px;
+  letter-spacing: 2px;
+  color:          var(--text-secondary);
+  padding:        2px 6px;
+  border-radius:  6px;
+  line-height:    1;
+  transition:     color var(--transition), background var(--transition);
+}
+
+.btn-card-menu:hover {
+  color:      var(--text-primary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Expandable purpose panel on card */
+.card-expand-panel {
+  max-height: 0;
+  overflow:   hidden;
+  transition: max-height 250ms ease;
+}
+
+.project-card.menu-open .card-expand-panel {
+  max-height: 120px;
+}
+
+.card-expand-inner {
+  padding:     10px 0 2px;
+  font-size:   12px;
+  color:       var(--text-secondary);
+  line-height: 1.5;
+  border-top:  1px solid var(--border-color);
+}
+
+/* Card actions (delete button) */
+.card-actions {
+  position:  absolute;
+  top:       12px;
+  right:     12px;
+  display:   none;
+}
+
+.project-card:hover .card-actions {
+  display: flex;
+}
+
+.btn-delete-card {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--text-secondary);
+  padding:       2px 4px;
+  border-radius: 4px;
+  font-size:     16px;
+  line-height:   1;
+  transition:    color var(--transition);
+}
+
+.btn-delete-card:hover { color: var(--red); }
+
+/* ── Modal ───────────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  display:         none;
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0, 0, 0, 0.35);
+  z-index:         500;
+  align-items:     center;
+  justify-content: center;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal {
+  background:    var(--bg-primary);
+  border-radius: var(--radius);
+  padding:       32px;
+  width:         420px;
+  max-width:     90vw;
+  box-shadow:    0 20px 60px rgba(0,0,0,0.18);
+}
+
+.modal-title {
+  font-size:     18px;
+  font-weight:   700;
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+}
+
+.modal-actions {
+  display:         flex;
+  justify-content: flex-end;
+  gap:             10px;
+  margin-top:      28px;
+}
+
+/* Body text inside a modal (delete confirmations, etc.) */
+.modal-body-text {
+  font-size:   14px;
+  line-height: 1.6;
+}
+
+/* ── Form elements ───────────────────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-label {
+  display:       block;
+  font-size:     13px;
+  font-weight:   500;
+  color:         var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-input,
+.form-select {
+  width:         100%;
+  padding:       9px 12px;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  font-family:   var(--font);
+  font-size:     14px;
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
+  transition:    border-color var(--transition), box-shadow var(--transition);
+  outline:       none;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+input[type="color"].form-input {
+  padding:   4px 6px;
+  height:    40px;
+  cursor:    pointer;
+}
+
+/* ── Toast notifications ─────────────────────────────────────────────────────── */
+#toast-container {
+  position:       fixed;
+  bottom:         28px;
+  right:          28px;
+  z-index:        9999;
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+  pointer-events: none;
+}
+
+.toast {
+  background:    var(--text-primary);
+  color:         #FFFFFF;
+  padding:       12px 18px;
+  border-radius: 10px;
+  font-size:     13px;
+  font-weight:   500;
+  box-shadow:    0 4px 16px rgba(0,0,0,0.18);
+  animation:     toast-in 200ms ease, toast-out 300ms ease 2700ms forwards;
+  pointer-events: auto;
+  max-width:     320px;
+}
+
+.toast.toast-error {
+  background: var(--red);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}
+
+/* ── Card: current task label ────────────────────────────────────────────────── */
+.current-task-label {
+  font-weight: 600;
+  color:       var(--text-primary);
+}
+
+/* Placeholder shown when a project has no active tasks */
+.current-task-none {
+  color:      var(--text-secondary);
+  font-style: italic;
+  font-size:  12px;
+}
+
+/* ── Card: expand panel purpose label ───────────────────────────────────────── */
+.card-expand-label {
+  font-size:      11px;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color:          var(--text-secondary);
+  margin-bottom:  4px;
+}
+
+/* ── Color picker (create project modal) ─────────────────────────────────────── */
+.color-picker-grid {
+  display:               grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:                   6px;
+  margin-bottom:         10px;
+}
+
+.color-swatch {
+  width:         22px;
+  height:        22px;
+  border-radius: 50%;
+  border:        2px solid transparent;
+  cursor:        pointer;
+  transition:    transform var(--transition), box-shadow var(--transition);
+  outline:       none;
+  padding:       0;
+}
+
+.color-swatch:hover {
+  transform: scale(1.12);
+}
+
+.color-swatch.selected {
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 3px var(--text-primary);
+}
+
+.color-picker-custom {
+  background:     none;
+  border:         none;
+  cursor:         pointer;
+  font-size:      13px;
+  color:          var(--blue);
+  font-family:    var(--font);
+  padding:        0;
+  text-decoration: underline;
+  margin-top:     2px;
+}
+
+.color-picker-custom:hover {
+  opacity: 0.75;
+}
+
+/* ── Floating custom color picker panel ──────────────────────────────────────── */
+
+.ccp-panel {
+  position:      fixed;
+  z-index:       10000;
+  width:         224px;
+  background:    #ffffff;
+  border:        1px solid #E0E0E0;
+  border-radius: 10px;
+  box-shadow:    0 8px 32px rgba(0,0,0,0.18);
+  user-select:   none;
+  padding-bottom: 12px;
+}
+
+[data-theme="dark"] .ccp-panel {
+  background:   #2C2C2E;
+  border-color: #3A3A3C;
+}
+
+/* Draggable header bar */
+.ccp-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         8px 12px;
+  cursor:          grab;
+  background:      #F5F5F7;
+  border-bottom:   1px solid #E0E0E0;
+  border-radius:   10px 10px 0 0;
+}
+
+.ccp-header:active { cursor: grabbing; }
+
+[data-theme="dark"] .ccp-header {
+  background:    #3A3A3C;
+  border-color:  #48484A;
+}
+
+.ccp-title {
+  font-size:   13px;
+  font-weight: 500;
+  color:       #1D1D1F;
+}
+
+[data-theme="dark"] .ccp-title { color: #F2F2F7; }
+
+.ccp-close {
+  background: none;
+  border:     none;
+  cursor:     pointer;
+  color:      #86868B;
+  font-size:  14px;
+  padding:    0 2px;
+  line-height: 1;
+}
+
+.ccp-close:hover { color: #1D1D1F; }
+[data-theme="dark"] .ccp-close:hover { color: #F2F2F7; }
+
+/* Gradient canvas area */
+.ccp-canvas-wrap {
+  position:  relative;
+  margin:    10px 10px 8px;
+  cursor:    crosshair;
+  border-radius: 4px;
+  overflow:  hidden;
+}
+
+.ccp-canvas {
+  display: block;
+  width:   200px;
+  height:  150px;
+}
+
+/* Circle cursor overlaid on the canvas */
+.ccp-cursor {
+  position:      absolute;
+  width:         12px;
+  height:        12px;
+  border-radius: 50%;
+  border:        2px solid #ffffff;
+  box-shadow:    0 0 0 1px rgba(0,0,0,0.4);
+  transform:     translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Hue rainbow slider */
+.ccp-hue-slider {
+  display:      block;
+  width:        calc(100% - 20px);
+  margin:       0 10px 10px;
+  height:       12px;
+  border-radius: 6px;
+  background:   linear-gradient(to right,
+    hsl(0,100%,50%), hsl(30,100%,50%), hsl(60,100%,50%), hsl(90,100%,50%),
+    hsl(120,100%,50%), hsl(150,100%,50%), hsl(180,100%,50%), hsl(210,100%,50%),
+    hsl(240,100%,50%), hsl(270,100%,50%), hsl(300,100%,50%), hsl(330,100%,50%),
+    hsl(360,100%,50%));
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.ccp-hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width:         16px;
+  height:        16px;
+  border-radius: 50%;
+  background:    #ffffff;
+  border:        2px solid #ffffff;
+  box-shadow:    0 0 0 1px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+  cursor:        pointer;
+}
+
+/* Bottom row: preview circle + hex input */
+.ccp-bottom {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  padding:     0 10px;
+}
+
+.ccp-preview {
+  width:         28px;
+  height:        28px;
+  border-radius: 50%;
+  border:        1px solid #E0E0E0;
+  flex-shrink:   0;
+}
+
+[data-theme="dark"] .ccp-preview { border-color: #48484A; }
+
+.ccp-hash {
+  color:     #86868B;
+  font-size: 13px;
+}
+
+.ccp-hex-input {
+  flex:        1;
+  border:      1px solid #E0E0E0;
+  border-radius: 6px;
+  padding:     4px 6px;
+  font-size:   13px;
+  font-family: monospace;
+  color:       #1D1D1F;
+  background:  #ffffff;
+  text-transform: uppercase;
+}
+
+[data-theme="dark"] .ccp-hex-input {
+  background:   #1C1C1E;
+  border-color: #48484A;
+  color:        #F2F2F7;
+}
+
+/* Native color input — fixed at viewport center so the OS dialog spawns there, not in the corner */
+.color-native-input {
+  position:       fixed;
+  left:           50%;
+  top:            50%;
+  transform:      translate(-50%, -50%);
+  opacity:        0;
+  width:          1px;
+  height:         1px;
+  padding:        0;
+  border:         0;
+  pointer-events: none;
+}
+
+/* ── Card drag states ────────────────────────────────────────────────────────── */
+
+/* Card being dragged: dim it so the user sees where it came from */
+.project-card.card-dragging {
+  opacity: 0.4;
+  cursor:  grabbing;
+}
+
+/* Section highlighted when a card is dragged in from a different phase */
+.project-section.section-drag-over {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 2px rgba(0, 122, 255, 0.35);
+  background:   rgba(0, 122, 255, 0.04);
+}
+
+/* Vertical insertion line for within-phase card reordering */
+/* box-shadow offset trick: shadow is same size as card but shifted; only the peeking strip is visible */
+.project-card.drop-before {
+  box-shadow: -3px 0 0 0 var(--blue);
+}
+.project-card.drop-after {
+  box-shadow: 3px 0 0 0 var(--blue);
+}
+
+/* ── Utility ─────────────────────────────────────────────────────────────────── */
+.text-secondary { color: var(--text-secondary); }
+.text-sm        { font-size: 13px; }
+.mt-8           { margin-top: 8px; }
+.mt-16          { margin-top: 16px; }
+
+/* ── Settings page ───────────────────────────────────────────────────────────── */
+.settings-section {
+  max-width: 520px;
+}
+
+/* Sub-tab bar */
+.settings-tabs {
+  display:        flex;
+  gap:            4px;
+  margin-bottom:  28px;
+  border-bottom:  1px solid var(--border-color);
+  padding-bottom: 0;
+}
+
+.settings-tab {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  font-family:   var(--font);
+  font-size:     14px;
+  font-weight:   500;
+  color:         var(--text-secondary);
+  padding:       8px 16px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition:    color var(--transition), border-color var(--transition);
+}
+
+.settings-tab.active {
+  color:               var(--text-primary);
+  border-bottom-color: var(--blue);
+}
+
+.settings-tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* Theme toggle group */
+.settings-appearance {
+  max-width:     520px;
+  margin-bottom: 32px;
+}
+
+.theme-toggle-group {
+  display:       inline-flex;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  overflow:      hidden;
+}
+
+.theme-toggle-btn {
+  background:   transparent;
+  border:       none;
+  border-right: 1px solid var(--border-color);
+  padding:      7px 20px;
+  font-family:  var(--font);
+  font-size:    14px;
+  cursor:       pointer;
+  color:        var(--text-secondary);
+  transition:   background var(--transition), color var(--transition);
+}
+
+.theme-toggle-btn:last-child { border-right: none; }
+
+.theme-toggle-btn.active {
+  background: var(--text-primary);
+  color:      var(--bg-primary);
+}
+
+/* Phase list */
+.phase-item {
+  list-style:    none;
+  margin-bottom: 8px;
+}
+
+.phase-item-row {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+}
+
+.phase-drag-handle {
+  color:       var(--border-color);
+  font-size:   14px;
+  cursor:      grab;
+  flex-shrink: 0;
+}
+
+.phase-input {
+  flex: 1;
+}
+
+.add-phase-row {
+  display:    flex;
+  gap:        8px;
+  margin-top: 16px;
+}
+
+.add-phase-row .form-input {
+  flex: 1;
+}
+
+/* Update log */
+.update-log-entry {
+  margin-bottom: 28px;
+}
+
+.update-log-version {
+  font-size:     15px;
+  font-weight:   700;
+  margin-bottom: 10px;
+  color:         var(--text-primary);
+}
+
+.update-log-list {
+  list-style:   disc;
+  padding-left: 20px;
+}
+
+.update-log-list li {
+  font-size:   14px;
+  color:       var(--text-secondary);
+  line-height: 1.8;
+}

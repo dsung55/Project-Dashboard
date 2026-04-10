@@ -1,0 +1,765 @@
+/* ── Project detail page styles ──────────────────────────────────────────────── */
+
+/* Back link */
+.back-link {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             6px;
+  color:           var(--text-secondary);
+  text-decoration: none;
+  font-size:       14px;
+  font-weight:     500;
+  margin-bottom:   24px;
+  transition:      color var(--transition);
+}
+
+.back-link:hover { color: var(--text-primary); }
+
+/* Project header bar */
+.project-header {
+  display:         flex;
+  align-items:     center;
+  gap:             16px;
+  margin-bottom:   36px;
+  padding-bottom:  24px;
+  border-bottom:   1px solid var(--border-color);
+}
+
+.project-color-swatch {
+  width:         6px;
+  height:        48px;
+  border-radius: 3px;
+  flex-shrink:   0;
+}
+
+.project-header-info {
+  flex: 1;
+}
+
+.project-name {
+  font-size:      30px;
+  font-weight:    700;
+  letter-spacing: -0.5px;
+  margin-bottom:  4px;
+}
+
+.project-meta {
+  display:     flex;
+  align-items: center;
+  gap:         16px;
+  flex-wrap:   wrap;
+}
+
+.project-meta-item {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  font-size:   13px;
+  color:       var(--text-secondary);
+}
+
+.meta-label {
+  font-weight: 500;
+  color:       var(--text-secondary);
+}
+
+/* Inline editable fields (phase, version) */
+.meta-select,
+.meta-input {
+  border:        1px solid transparent;
+  border-radius: 6px;
+  padding:       3px 8px;
+  font-family:   var(--font);
+  font-size:     13px;
+  color:         var(--text-primary);
+  background:    transparent;
+  outline:       none;
+  cursor:        pointer;
+  transition:    border-color var(--transition), background var(--transition);
+}
+
+.meta-select:hover,
+.meta-input:hover {
+  border-color: var(--border-color);
+  background:   var(--bg-secondary);
+}
+
+.meta-select:focus,
+.meta-input:focus {
+  border-color: var(--blue);
+  background:   var(--bg-primary);
+  box-shadow:   0 0 0 3px rgba(0,122,255,0.12);
+  cursor:       text;
+}
+
+.meta-input { width: 100px; }
+
+/* ── Two-column layout ───────────────────────────────────────────────────────── */
+.project-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap:     40px;
+  align-items: start;
+}
+
+.project-main  { min-width: 0; }
+.project-aside { position: sticky; top: 32px; }
+
+/* ── Section card ────────────────────────────────────────────────────────────── */
+.section-card {
+  background:    var(--bg-primary);
+  border:        1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding:       24px;
+  margin-bottom: 24px;
+}
+
+.section-card-title {
+  font-size:     13px;
+  font-weight:   600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color:         var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* ── Task list ───────────────────────────────────────────────────────────────── */
+.task-add-row {
+  display:   flex;
+  gap:       8px;
+  margin-bottom: 16px;
+}
+
+.task-add-input {
+  flex:          1;
+  padding:       8px 12px;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  font-family:   var(--font);
+  font-size:     14px;
+  outline:       none;
+  transition:    border-color var(--transition), box-shadow var(--transition);
+}
+
+.task-add-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0,122,255,0.12);
+}
+
+.task-list { list-style: none; }
+
+/* Single task item */
+.task-item {
+  border:        1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow:      hidden;
+  position:      relative;
+  transition:    box-shadow var(--transition);
+}
+
+.task-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+.task-row {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  padding:     12px 14px;
+  cursor:      pointer;
+  user-select: none;
+}
+
+/* Drag handle for task rows */
+.task-drag-handle {
+  color:      var(--text-secondary);
+  font-size:  16px;
+  cursor:     grab;
+  flex-shrink: 0;
+  opacity:    0;
+  transition: opacity var(--transition);
+  line-height: 1;
+}
+
+.task-row:hover .task-drag-handle { opacity: 1; }
+.task-drag-handle:active { cursor: grabbing; }
+
+/* Drag states for task items */
+.task-item.task-dragging {
+  opacity: 0.4;
+}
+
+/* Horizontal insertion line above or below a task during reordering */
+/* box-shadow is not clipped by the element's own overflow:hidden — safe to use here */
+.task-item.drop-before { box-shadow: 0 -3px 0 0 var(--blue); }
+.task-item.drop-after  { box-shadow: 0  3px 0 0 var(--blue); }
+
+/* Custom checkbox */
+.task-checkbox {
+  width:         18px;
+  height:        18px;
+  border:        2px solid var(--border-color);
+  border-radius: 5px;
+  flex-shrink:   0;
+  display:       flex;
+  align-items:   center;
+  justify-content: center;
+  transition:    background var(--transition), border-color var(--transition);
+  cursor:        pointer;
+}
+
+.task-checkbox.checked {
+  background:   var(--green);
+  border-color: var(--green);
+}
+
+.task-checkbox.checked::after {
+  content:     '';
+  width:       10px;
+  height:      6px;
+  border-left: 2px solid #FFF;
+  border-bottom: 2px solid #FFF;
+  transform:   rotate(-45deg) translateY(-1px);
+  display:     block;
+}
+
+.task-text {
+  flex:       1;
+  font-size:  14px;
+  min-width:  0;
+  word-break: break-word;
+}
+
+.task-item.completed .task-text {
+  color: var(--text-secondary);
+}
+
+.task-text.task-current {
+  font-weight: 700;
+}
+
+.task-expand-icon {
+  color:       var(--text-secondary);
+  font-size:   11px;
+  transition:  transform var(--transition);
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.task-item.expanded .task-expand-icon {
+  transform: rotate(180deg);
+}
+
+.btn-task-delete {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--text-secondary);
+  font-size:     16px;
+  line-height:   1;
+  padding:       2px 4px;
+  border-radius: 4px;
+  transition:    color var(--transition);
+  opacity:       0;
+}
+
+.task-row:hover .btn-task-delete { opacity: 1; }
+.btn-task-delete:hover { color: var(--red); }
+
+/* Expanded task panel */
+.task-panel {
+  max-height: 0;
+  overflow:   hidden;
+  transition: max-height 250ms ease;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.task-item.expanded .task-panel {
+  max-height: 600px;
+}
+
+.task-panel-inner {
+  padding: 14px 14px 14px 42px;
+}
+
+/* Sub-items */
+.sub-items-list {
+  list-style: none;
+  margin-top: 8px;
+}
+
+/* Sub-item row — no box, just clean rows */
+.sub-item-row {
+  display:       flex;
+  align-items:   center;
+  gap:           6px;
+  margin-bottom: 2px;
+  padding:       4px 6px;
+  border-radius: 6px;
+  transition:    background var(--transition);
+}
+
+.sub-item-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .sub-item-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Drag handle for sub-items */
+.sub-drag-handle {
+  color:      var(--text-secondary);
+  font-size:  14px;
+  cursor:     grab;
+  flex-shrink: 0;
+  opacity:    0;
+  transition: opacity var(--transition);
+  line-height: 1;
+  user-select: none;
+}
+
+.sub-item-row:hover .sub-drag-handle { opacity: 1; }
+.sub-drag-handle:active { cursor: grabbing; }
+
+/* Checkbox for sub-items (smaller than task checkbox) */
+.sub-checkbox {
+  width:           15px;
+  height:          15px;
+  border:          2px solid var(--border-color);
+  border-radius:   4px;
+  flex-shrink:     0;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  cursor:          pointer;
+  transition:      background var(--transition), border-color var(--transition);
+}
+
+.sub-checkbox.checked {
+  background:   var(--green);
+  border-color: var(--green);
+}
+
+.sub-checkbox.checked::after {
+  content:       '';
+  width:         8px;
+  height:        5px;
+  border-left:   2px solid #FFF;
+  border-bottom: 2px solid #FFF;
+  transform:     rotate(-45deg) translateY(-1px);
+  display:       block;
+}
+
+/* Sub-item text — span, not input; dblclick to edit */
+.sub-item-text {
+  flex:       1;
+  font-size:  13px;
+  color:      var(--text-primary);
+  min-width:  0;
+  word-break: break-word;
+  cursor:     default;
+  user-select: none;
+}
+
+.sub-item-text.completed {
+  color:           var(--text-secondary);
+  text-decoration: line-through;
+}
+
+/* Due date badge on a sub-item row */
+.sub-due-badge {
+  font-size:     0.68rem;
+  color:         var(--text-secondary);
+  background:    var(--bg-secondary);
+  border:        1px solid var(--border-color);
+  border-radius: 4px;
+  padding:       1px 5px;
+  white-space:   nowrap;
+  flex-shrink:   0;
+}
+
+/* Inline edit input for sub-item text (shown on dblclick) */
+.sub-item-edit-input {
+  flex:          1;
+  font-size:     13px;
+  font-family:   var(--font);
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
+  border:        1px solid var(--blue);
+  border-radius: 4px;
+  padding:       1px 6px;
+  outline:       none;
+  box-shadow:    0 0 0 2px rgba(0,122,255,0.12);
+  min-width:     0;
+}
+
+/* Date input group shown during sub-item edit mode */
+.sub-date-group {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+  flex-shrink: 0;
+}
+
+.sub-due-input {
+  width:         38px;
+  font-size:     0.75rem;
+  padding:       2px 3px;
+  border:        1px solid var(--border-color);
+  border-radius: 4px;
+  background:    var(--bg-primary);
+  color:         var(--text-primary);
+  text-align:    center;
+  font-family:   var(--font);
+  outline:       none;
+  transition:    border-color var(--transition);
+}
+
+.sub-due-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
+}
+
+.sub-due-year { width: 50px; }
+
+.btn-sub-delete {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--text-secondary);
+  font-size:     14px;
+  line-height:   1;
+  padding:       0 2px;
+  opacity:       0;
+  transition:    color var(--transition);
+  flex-shrink:   0;
+}
+
+.sub-item-row:hover .btn-sub-delete { opacity: 1; }
+.btn-sub-delete:hover { color: var(--red); }
+
+/* Thin divider between active and completed sub-items */
+.sub-items-separator {
+  list-style:  none;
+  border-top:  1px solid rgba(0, 0, 0, 0.35);
+  margin:      4px 8px;
+}
+
+[data-theme="dark"] .sub-items-separator {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Drag states for sub-items */
+.sub-item-row.sub-dragging {
+  opacity: 0.4;
+}
+
+/* Horizontal insertion line above or below a sub-item during reordering */
+.sub-item-row.drop-before { box-shadow: 0 -3px 0 0 var(--blue); }
+.sub-item-row.drop-after  { box-shadow: 0  3px 0 0 var(--blue); }
+
+.sub-item-add-row {
+  display:       flex;
+  gap:           6px;
+  margin-bottom: 4px;
+}
+
+/* "Add" button inside the sub-item row */
+.btn-sub-add {
+  padding:   4px 10px;
+  font-size: 12px;
+}
+
+.sub-item-add-input {
+  flex:          1;
+  padding:       4px 8px;
+  border:        1px solid var(--border-color);
+  border-radius: 6px;
+  font-family:   var(--font);
+  font-size:     13px;
+  outline:       none;
+  background:    var(--bg-primary);
+}
+
+.sub-item-add-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
+}
+
+.sub-add-date-group {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+  flex-shrink: 0;
+}
+
+.sub-add-date-input {
+  width:         28px;
+  padding:       3px 4px;
+  border:        1px solid var(--border-color);
+  border-radius: 4px;
+  font-size:     12px;
+  font-family:   inherit;
+  text-align:    center;
+  background:    var(--bg-primary);
+  color:         var(--text-primary);
+  outline:       none;
+}
+
+.sub-add-date-input.sub-add-year { width: 44px; }
+
+.sub-add-date-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
+}
+
+/* Task notes */
+.task-notes-label {
+  font-size:     12px;
+  font-weight:   500;
+  color:         var(--text-secondary);
+  margin-top:    12px;
+  margin-bottom: 4px;
+}
+
+.task-notes-input {
+  width:         100%;
+  padding:       8px 10px;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  font-family:   var(--font);
+  font-size:     13px;
+  resize:        vertical;
+  min-height:    64px;
+  outline:       none;
+  background:    var(--bg-primary);
+  transition:    border-color var(--transition), box-shadow var(--transition);
+}
+
+.task-notes-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0,122,255,0.12);
+}
+
+/* Completed tasks divider */
+.completed-divider {
+  font-size:     12px;
+  font-weight:   600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color:         var(--text-secondary);
+  margin:        24px 0 12px;
+}
+
+/* ── Project notes ───────────────────────────────────────────────────────────── */
+.project-notes-textarea {
+  width:      100%;
+  min-height: 160px;
+  padding:    12px;
+  border:     1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size:  14px;
+  line-height: 1.6;
+  resize:     vertical;
+  outline:    none;
+  color:      var(--text-primary);
+  background: var(--bg-primary);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.project-notes-textarea:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0,122,255,0.12);
+}
+
+/* ── Files section ───────────────────────────────────────────────────────────── */
+.file-upload-area {
+  border:        2px dashed var(--border-color);
+  border-radius: 10px;
+  padding:       20px;
+  text-align:    center;
+  cursor:        pointer;
+  transition:    border-color var(--transition), background var(--transition);
+  margin-bottom: 16px;
+}
+
+.file-upload-area:hover,
+.file-upload-area.drag-over {
+  border-color: var(--blue);
+  background:   rgba(0,122,255,0.04);
+}
+
+.file-upload-label {
+  font-size:  13px;
+  color:      var(--text-secondary);
+  cursor:     pointer;
+  display:    block;
+}
+
+.file-upload-label span {
+  color:       var(--blue);
+  font-weight: 500;
+}
+
+.file-list { list-style: none; }
+
+.file-item {
+  display:       flex;
+  align-items:   center;
+  justify-content: space-between;
+  padding:       8px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size:     13px;
+}
+
+.file-item:last-child { border-bottom: none; }
+
+.file-item a {
+  color:           var(--blue);
+  text-decoration: none;
+  font-weight:     500;
+  word-break:      break-all;
+}
+
+.file-item a:hover { text-decoration: underline; }
+
+.file-item-size {
+  color:      var(--text-secondary);
+  font-size:  12px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* Clickable color dot in project header — opens the color picker */
+.project-color-btn {
+  width:         18px;
+  height:        18px;
+  border-radius: 50%;
+  border:        2px solid rgba(0, 0, 0, 0.15);
+  cursor:        pointer;
+  padding:       0;
+  flex-shrink:   0;
+  transition:    transform var(--transition), box-shadow var(--transition);
+}
+
+.project-color-btn:hover {
+  transform:  scale(1.2);
+  box-shadow: 0 0 0 3px var(--border-color);
+}
+
+[data-theme="dark"] .project-color-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Due date styles ─────────────────────────────────────────────────────────── */
+
+/* Badge shown on the task row — sits on the right, double-click to edit */
+.task-due-badge {
+  font-size:    0.72rem;
+  color:        var(--text-secondary);
+  background:   var(--bg-secondary);
+  border:       1px solid var(--border-color);
+  border-radius: 4px;
+  padding:      1px 6px;
+  white-space:  nowrap;
+  flex-shrink:  0;
+  margin-left:  4px;
+  cursor:       pointer;
+}
+
+/* Empty state — invisible placeholder that can still be double-clicked */
+.task-due-badge.task-due-empty {
+  border-color: transparent;
+  background:   transparent;
+  min-width:    24px;
+}
+
+/* Inline edit container that replaces the badge on double-click */
+.task-due-edit-inline {
+  display:     inline-flex;
+  align-items: center;
+  gap:         2px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* Due date row inside the expanded task panel */
+.task-due-row {
+  display:       flex;
+  align-items:   center;
+  gap:           4px;
+  padding:       8px 0 10px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+.task-due-label {
+  font-size:    0.8rem;
+  color:        var(--text-secondary);
+  margin-right: 4px;
+  white-space:  nowrap;
+}
+
+/* Small input boxes for Month, Day, Year */
+.task-due-input {
+  width:        46px;
+  font-size:    0.8rem;
+  padding:      3px 4px;
+  border:       1px solid var(--border-color);
+  border-radius: 4px;
+  background:   var(--bg-primary);
+  color:        var(--text-primary);
+  text-align:   center;
+  font-family:  var(--font);
+  outline:      none;
+  transition:   border-color var(--transition), box-shadow var(--transition);
+}
+
+.task-due-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
+}
+
+/* Year box is slightly wider */
+.task-due-year { width: 58px; }
+
+/* Month box — wide enough to show "Month" placeholder without clipping */
+.task-due-month { width: 64px; }
+
+/* Separator "/" between date boxes */
+.task-due-sep {
+  font-size:   0.85rem;
+  color:       var(--text-secondary);
+  user-select: none;
+}
+
+/* Date input group in the add-task row */
+.task-add-date {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+  flex-shrink: 0;
+}
+
+/* Ensure task text input shrinks to make room for date inputs */
+.task-add-input {
+  min-width: 0;
+}
+
+/* Inline edit input replacing the task text span on double-click */
+.task-edit-input {
+  flex:         1;
+  font-size:    14px;
+  font-family:  var(--font);
+  font-weight:  inherit;
+  color:        var(--text-primary);
+  background:   var(--bg-primary);
+  border:       1px solid var(--blue);
+  border-radius: 4px;
+  padding:      1px 6px;
+  outline:      none;
+  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
+  min-width:    0;
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <script>
+    (function() {
+      try {
+        var cfg = JSON.parse(localStorage.getItem('dashboardTheme') || '{}');
+        var theme = cfg.theme || 'system';
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = theme === 'dark' || (theme === 'system' && prefersDark);
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">Dashboard</div>
+      <ul class="sidebar-nav">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="settings.html">Settings</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Projects</h1>
+        <button class="btn btn-primary" id="btn-new-project">+ New Project</button>
+      </div>
+
+      <!-- Search bar -->
+      <input class="search-input" type="text" id="project-search" placeholder="Search projects…" autocomplete="off">
+
+      <!-- Phase sections are rendered dynamically by dashboard.js -->
+      <div id="phases-container"></div>
+    </main>
+
+  </div>
+
+  <!-- Create project modal -->
+  <div class="modal-overlay" id="modal-create">
+    <div class="modal">
+      <div class="modal-title">New Project</div>
+      <form id="form-create">
+        <div class="form-group">
+          <label class="form-label" for="new-project-name">Project name</label>
+          <input class="form-input" type="text" id="new-project-name" placeholder="e.g. Website Redesign" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <div class="color-picker-grid" id="color-picker-grid"></div>
+          <button type="button" class="color-picker-custom" id="btn-custom-color">Custom color…</button>
+          <input type="color" id="new-project-color-native" class="color-native-input" value="#4A90D9">
+          <input type="hidden" id="new-project-color" value="#4A90D9">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-project-phase">Starting phase</label>
+          <select class="form-select" id="new-project-phase"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-project-version">Version</label>
+          <input class="form-input" type="text" id="new-project-version" placeholder="v1.0" value="v1.0" autocomplete="off">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-create">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change project color modal -->
+  <div class="modal-overlay" id="modal-change-color">
+    <div class="modal">
+      <div class="modal-title">Change Color</div>
+      <div class="form-group">
+        <div class="color-picker-grid" id="color-picker-grid-change"></div>
+        <button type="button" class="color-picker-custom" id="btn-custom-color-change">Custom color…</button>
+        <input type="color" id="change-project-color-native" class="color-native-input" value="#4A90D9">
+        <input type="hidden" id="change-project-color" value="#4A90D9">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-change-color">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-change-color">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div class="modal-overlay" id="modal-delete">
+    <div class="modal">
+      <div class="modal-title">Delete Project?</div>
+      <p class="text-secondary modal-body-text">
+        This will permanently delete <strong id="delete-project-name"></strong> and all its tasks, notes, and uploaded files. This cannot be undone.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-delete">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="scripts/api.js"></script>
+  <script src="scripts/color-picker.js"></script>
+  <script src="scripts/dashboard.js"></script>
+</body>
+</html>

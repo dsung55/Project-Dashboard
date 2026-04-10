@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project — Dashboard</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/project.css">
+  <script>
+    (function() {
+      try {
+        var cfg = JSON.parse(localStorage.getItem('dashboardTheme') || '{}');
+        var theme = cfg.theme || 'system';
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = theme === 'dark' || (theme === 'system' && prefersDark);
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">Dashboard</div>
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="settings.html">Settings</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+
+      <a href="index.html" class="back-link">&#8592; All Projects</a>
+
+      <!-- Project header -->
+      <div class="project-header">
+        <div class="project-color-swatch" id="project-color-swatch"></div>
+        <div class="project-header-info">
+          <div class="project-name" id="project-name">Loading…</div>
+          <div class="project-meta">
+            <div class="project-meta-item">
+              <span class="meta-label">Phase</span>
+              <select class="meta-select" id="project-phase"></select>
+            </div>
+            <div class="project-meta-item">
+              <span class="meta-label">Version</span>
+              <input class="meta-input" type="text" id="project-version" placeholder="v1.0">
+            </div>
+            <div class="project-meta-item">
+              <span class="meta-label">Color</span>
+              <button class="project-color-btn" id="project-color-btn" title="Change project color"></button>
+            </div>
+            <div class="project-meta-item">
+              <button class="btn btn-secondary" id="btn-undo">Undo</button>
+            </div>
+            <div class="project-meta-item">
+              <button class="btn btn-secondary" id="btn-order-by-date">Order by Date</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="btn-delete-project">Delete Project</button>
+      </div>
+
+      <!-- Two-column body -->
+      <div class="project-body">
+
+        <!-- Left column: tasks -->
+        <div class="project-main">
+          <div class="section-card">
+            <div class="section-card-title">Tasks</div>
+
+            <!-- Add task row -->
+            <div class="task-add-row">
+              <input class="task-add-input" type="text" id="task-add-input" placeholder="Enter Task" autocomplete="off">
+              <div class="task-add-date">
+                <input class="task-due-input task-due-month" id="add-month" data-field="month" placeholder="Month" maxlength="2">
+                <span class="task-due-sep">/</span>
+                <input class="task-due-input" id="add-day" data-field="day" placeholder="Day" maxlength="2">
+                <span class="task-due-sep">/</span>
+                <input class="task-due-input task-due-year" id="add-year" data-field="year" placeholder="Year" maxlength="4">
+              </div>
+              <button class="btn btn-primary" id="btn-add-task">Add</button>
+            </div>
+
+            <!-- Task list -->
+            <ul class="task-list" id="task-list"></ul>
+          </div>
+        </div>
+
+        <!-- Right column: purpose + notes + files -->
+        <div class="project-aside">
+
+          <!-- Project purpose -->
+          <div class="section-card">
+            <div class="section-card-title">Purpose</div>
+            <textarea class="project-notes-textarea" id="project-purpose"></textarea>
+          </div>
+
+          <!-- Project notes -->
+          <div class="section-card">
+            <div class="section-card-title">Notes</div>
+            <textarea class="project-notes-textarea" id="project-notes"></textarea>
+          </div>
+
+          <!-- Files -->
+          <div class="section-card">
+            <div class="section-card-title">Files</div>
+
+            <!-- Upload drop area -->
+            <div class="file-upload-area" id="file-upload-area">
+              <label class="file-upload-label">
+                <span>Choose a file</span> or drag it here
+              </label>
+              <input type="file" id="file-input" style="display:none">
+            </div>
+
+            <!-- Uploaded file list -->
+            <ul class="file-list" id="file-list"></ul>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Color picker modal -->
+  <div class="modal-overlay" id="modal-color">
+    <div class="modal">
+      <div class="modal-title">Change Color</div>
+      <div class="form-group">
+        <div class="color-picker-grid" id="color-picker-grid-project"></div>
+        <button type="button" class="color-picker-custom" id="btn-custom-color-project">Custom color…</button>
+        <input type="color" id="project-color-native" class="color-native-input" value="#4A90D9">
+        <input type="hidden" id="project-color-value" value="#4A90D9">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-color">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-color">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete project confirmation modal -->
+  <div class="modal-overlay" id="modal-delete-project">
+    <div class="modal">
+      <div class="modal-title">Delete Project?</div>
+      <p class="text-secondary modal-body-text">
+        This will permanently delete <strong id="delete-project-name-detail"></strong> and all its tasks, notes, and uploaded files. This cannot be undone.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-delete-project">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete-project">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="scripts/api.js"></script>
+  <script src="scripts/color-picker.js"></script>
+  <script src="scripts/project.js"></script>
+</body>
+</html>

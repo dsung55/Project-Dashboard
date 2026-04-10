@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Dashboard</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <script>
+    (function() {
+      try {
+        var cfg = JSON.parse(localStorage.getItem('dashboardTheme') || '{}');
+        var theme = cfg.theme || 'system';
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = theme === 'dark' || (theme === 'system' && prefersDark);
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">Dashboard</div>
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="settings.html" class="active">Settings</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Settings</h1>
+      </div>
+
+      <!-- Appearance section (always visible, above tabs) -->
+      <div class="settings-appearance">
+        <div class="section-heading">Appearance</div>
+        <div class="theme-toggle-group" id="theme-toggle">
+          <button class="theme-toggle-btn" data-theme="light">Light</button>
+          <button class="theme-toggle-btn" data-theme="system">System</button>
+          <button class="theme-toggle-btn" data-theme="dark">Dark</button>
+        </div>
+      </div>
+
+      <!-- Sub-tab bar -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="phases">Phases</button>
+        <button class="settings-tab" data-tab="update-log">Update Log</button>
+      </div>
+
+      <!-- Phases tab -->
+      <div class="settings-panel settings-section" id="tab-phases">
+        <div class="section-heading">Project Phases</div>
+        <p class="text-secondary text-sm" style="margin-bottom: 20px; line-height: 1.6;">
+          Phases appear in the phase dropdown on every project. You can rename or delete phases at any time — changes won't affect existing projects until you update them individually.
+        </p>
+
+        <!-- Phase list -->
+        <ul id="phase-list"></ul>
+
+        <!-- Add new phase -->
+        <div class="add-phase-row">
+          <input class="form-input" type="text" id="new-phase-input" placeholder="New phase name…" autocomplete="off">
+          <button class="btn btn-primary" id="btn-add-phase">Add</button>
+        </div>
+      </div>
+
+      <!-- Update Log tab -->
+      <div class="settings-panel" id="tab-update-log" style="display:none; max-width:520px;">
+        <div class="section-heading">Update Log</div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.4.1</div>
+          <ul class="update-log-list">
+            <li>Sub-items now have checkboxes — click to mark them done, completed sub-items appear grayed out with a strikethrough</li>
+            <li>Double-click any sub-item to edit its text and set a due date; a badge displays the date on the row when set</li>
+            <li>New sub-items now appear below the entry box instead of above it</li>
+            <li>Sub-item rows are now borderless — cleaner, easier to scan</li>
+            <li>Month input in all due-date fields is now wide enough to show the full placeholder</li>
+            <li>Date fields only accept numbers; Month clamps to 1–12 and Day clamps to 1–31</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.4</div>
+          <ul class="update-log-list">
+            <li>Tasks now support due dates — enter Month/Day/Year in the expanded panel; the date appears as a badge on the task row</li>
+            <li>Set a due date while creating a task using the date boxes in the add-task row</li>
+            <li>New "Order by Date" button in the project header sorts unfinished tasks by due date (closest first), undated tasks go to the bottom</li>
+            <li>New "Undo" button in the project header reverts your last action — add, delete, complete, drag, rename, or sort (up to 20 steps)</li>
+            <li>Double-click any task name to edit it inline; press Enter to save or Escape to cancel</li>
+            <li>Delete Project button no longer shows in red — matches the style of other buttons</li>
+            <li>Sidebar navigation tabs now show subtle outlines for clearer visual structure</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.3.1</div>
+          <ul class="update-log-list">
+            <li>Project color can now be changed after creation — click the color dot next to the version field on the project page</li>
+            <li>Custom color dialog now opens centered on screen instead of in the corner</li>
+            <li>Project purpose on dashboard cards now always reflects the latest saved value — fixed cases where it showed "No purpose set" even when a purpose existed</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.3</div>
+          <ul class="update-log-list">
+            <li>Active tasks can now be dragged to reorder them — grab the ⠿ handle on any task row</li>
+            <li>Sub-items now display as individual outlined cards instead of plain bullet points</li>
+            <li>Adding a sub-item no longer closes the task panel — stay in the panel to add multiple sub-items at once</li>
+            <li>Sub-items within a task can also be reordered by dragging the ⠿ handle</li>
+            <li>Projects created in the "In Progress" or "Testing" phase now correctly appear in the In Progress section immediately</li>
+            <li>Dashboard "Ongoing" section renamed to "In Progress" to match the phase list</li>
+            <li>Project cards can be dragged to reorder them within their section — order saves automatically</li>
+            <li>Drag a project card to a different section to instantly move it and update its phase</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.2.3</div>
+          <ul class="update-log-list">
+            <li>Dashboard now auto-refreshes when you return from a project page — current task and other changes appear immediately without a manual reload</li>
+            <li>Fixed stale current-task display caused by browser back-forward cache freezing a mid-flight refresh</li>
+            <li>Dashboard project list is no longer cached by the browser — always fetches the latest data from the server</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.2.2</div>
+          <ul class="update-log-list">
+            <li>Current task on dashboard cards now correctly shows the active task — fixed a data migration issue where older project entries were missing the field</li>
+            <li>New Project button is now clearly visible in dark mode (black background, white text)</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.2.1</div>
+          <ul class="update-log-list">
+            <li>Color swatches in the new project modal are now smaller and more compact</li>
+            <li>Color palette updated to 15 visually distinct hues with no near-duplicates</li>
+            <li>New project version field now pre-fills with "v1.0" by default</li>
+            <li>Dark mode hover and active states fixed for sidebar, ghost buttons, and card menus</li>
+            <li>Section box fills are now more subtle — border stands out over background</li>
+            <li>Dashboard sections are hidden entirely when they contain no projects</li>
+            <li>Search filter also hides sections when no cards match</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.2</div>
+          <ul class="update-log-list">
+            <li>Color picker replaced with a Google Calendar-style grid of 15 preset swatches plus a custom color option</li>
+            <li>Dashboard status sections and page header now have a visible outline box for better organization</li>
+            <li>Project card name font size increased for stronger visual hierarchy</li>
+            <li>Current task label on cards is now bold</li>
+            <li>Real-time search bar added above the dashboard to filter projects by name</li>
+            <li>3-dot purpose panel now shows a "Purpose" heading</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.1</div>
+          <ul class="update-log-list">
+            <li>Light / Dark / System color theme setting</li>
+            <li>Project Purpose field on project detail page</li>
+            <li>Dashboard cards now show the current (next up) task instead of a progress bar</li>
+            <li>First incomplete task is bolded on the project detail page</li>
+            <li>3-dot button on cards expands to show the project purpose</li>
+            <li>Delete project button added to the project detail page</li>
+            <li>Completed tasks no longer show strikethrough — greyed out only</li>
+            <li>Project title size increased on detail page</li>
+            <li>Cleaner placeholder text on task and note inputs</li>
+            <li>Update Log added to Settings</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.0</div>
+          <ul class="update-log-list">
+            <li>Initial creation</li>
+          </ul>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="scripts/api.js"></script>
+  <script src="scripts/settings.js"></script>
+</body>
+</html>

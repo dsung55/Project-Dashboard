@@ -1,0 +1,10 @@
+{
+  "phases": [
+    "Planning",
+    "Planned",
+    "In Progress",
+    "Testing",
+    "Completed"
+  ],
+  "theme": "light"
+}
