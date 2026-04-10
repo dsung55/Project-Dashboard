@@ -247,8 +247,8 @@ body {
 
 .project-grid {
   display:               grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap:                   16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap:                   14px;
 }
 
 /* Empty state text */
@@ -263,14 +263,14 @@ body {
   background:    var(--bg-primary);
   border:        1px solid var(--border-color);
   border-radius: var(--radius);
-  padding:       20px 20px 16px;
+  padding:       16px 16px 12px;
   cursor:        pointer;
   transition:    box-shadow var(--transition), transform var(--transition);
   border-left:   4px solid var(--project-color, #4A90D9);
   position:      relative;
   display:       flex;
   flex-direction: column;
-  gap:           10px;
+  gap:           8px;
 }
 
 .project-card:hover {
@@ -339,19 +339,19 @@ body {
 
 /* Current task label on card */
 .card-current-task {
-  font-size:     14px;
+  font-size:     15px;
   color:         var(--text-secondary);
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
   min-height:    20px;
+  margin-top:    auto;
 }
 
 /* Card footer row containing the 3-dot menu */
 .card-footer {
   display:         flex;
   justify-content: flex-end;
-  margin-top:      auto;
 }
 
 /* 3-dot menu button */
@@ -1090,6 +1090,13 @@ input[type="color"].form-input {
 }
 
 .gt-delete-btn:hover { color: var(--red); }
+
+/* Divider between active and completed tasks on the global tasks page */
+.gt-completed-divider {
+  border:     none;
+  border-top: 1px solid var(--text-primary);
+  margin:     8px 0;
+}
 
 /* Empty state */
 .tasks-empty {

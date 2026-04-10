@@ -44,14 +44,31 @@ function renderList(animate) {
     return;
   }
 
-  tasks.forEach((task, index) => {
+  // Split into active and completed; keep original order within each group
+  const active    = tasks.filter(t => !t.completed);
+  const completed = tasks.filter(t =>  t.completed);
+
+  active.forEach((task, index) => {
     const item = buildItem(task);
     if (animate) {
-      // Exponentially decreasing delay: first item waits the longest, each subsequent is faster
-      // base delay starts at 60ms and multiplies by 0.72 each step
-      const delayMs = Math.round(60 * Math.pow(0.72, index));
-      // Accumulate delay so items pop in sequentially (not all at the same reduced delay)
       const offsetMs = calculateCumulativeDelay(index);
+      item.style.animationName  = 'task-pop-in';
+      item.style.animationDelay = offsetMs + 'ms';
+    }
+    list.appendChild(item);
+  });
+
+  // Separator between active and completed
+  if (active.length > 0 && completed.length > 0) {
+    const hr = document.createElement('hr');
+    hr.className = 'gt-completed-divider';
+    list.appendChild(hr);
+  }
+
+  completed.forEach((task, index) => {
+    const item = buildItem(task);
+    if (animate) {
+      const offsetMs = calculateCumulativeDelay(active.length + index);
       item.style.animationName  = 'task-pop-in';
       item.style.animationDelay = offsetMs + 'ms';
     }

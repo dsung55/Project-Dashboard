@@ -132,11 +132,11 @@
 
 .task-add-input {
   flex:          1;
-  padding:       8px 12px;
+  padding:       9px 12px;
   border:        1px solid var(--border-color);
   border-radius: 8px;
   font-family:   var(--font);
-  font-size:     14px;
+  font-size:     15px;
   outline:       none;
   transition:    border-color var(--transition), box-shadow var(--transition);
 }
@@ -164,7 +164,7 @@
   display:     flex;
   align-items: center;
   gap:         10px;
-  padding:     12px 14px;
+  padding:     14px 16px;
   cursor:      pointer;
   user-select: none;
 }
@@ -224,7 +224,7 @@
 
 .task-text {
   flex:       1;
-  font-size:  14px;
+  font-size:  16px;
   min-width:  0;
   word-break: break-word;
 }
