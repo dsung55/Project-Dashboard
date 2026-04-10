@@ -12,6 +12,7 @@ const DATA_DIR     = path.join(__dirname, 'data');
 const PROJECTS_DIR = path.join(DATA_DIR, 'projects');
 const PROJECTS_IDX = path.join(DATA_DIR, 'projects.json');
 const CONFIG_FILE  = path.join(DATA_DIR, 'config.json');
+const TASKS_FILE   = path.join(DATA_DIR, 'tasks.json');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,20 @@ app.get('/api/config', (_req, res) => {
 app.put('/api/config', (req, res) => {
   writeJSON(CONFIG_FILE, req.body);
   res.json(req.body);
+});
+
+// GET /api/tasks — return all global (miscellaneous) tasks
+app.get('/api/tasks', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const tasks = readJSON(TASKS_FILE, []);
+  res.json(tasks);
+});
+
+// PUT /api/tasks — save all global tasks (full replacement)
+app.put('/api/tasks', (req, res) => {
+  const tasks = Array.isArray(req.body) ? req.body : [];
+  writeJSON(TASKS_FILE, tasks);
+  res.json(tasks);
 });
 
 // ── First-run bootstrap ───────────────────────────────────────────────────────

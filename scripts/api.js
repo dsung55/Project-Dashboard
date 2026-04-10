@@ -125,6 +125,24 @@ async function saveConfig(data) {
   return res.json();
 }
 
+// Return all global (miscellaneous) tasks
+async function getTasks() {
+  const res = await fetch('/api/tasks', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to load tasks');
+  return res.json();
+}
+
+// Save the full global tasks list (replaces all)
+async function saveTasks(tasks) {
+  const res = await fetch('/api/tasks', {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(tasks)
+  });
+  if (!res.ok) throw new Error('Failed to save tasks');
+  return res.json();
+}
+
 // Expose all API functions on the global window.api object
 window.api = {
   getProjects,
@@ -136,5 +154,7 @@ window.api = {
   uploadFile,
   getFileUrl,
   getConfig,
-  saveConfig
+  saveConfig,
+  getTasks,
+  saveTasks
 };

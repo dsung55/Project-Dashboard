@@ -315,36 +315,36 @@ body {
 }
 
 .project-card-name {
-  font-size:   19px;
+  font-size:   22px;
   font-weight: 700;
   color:       var(--text-primary);
   line-height: 1.3;
 }
 
 .project-card-version {
-  font-size:     12px;
+  font-size:     13px;
   font-weight:   500;
   color:         var(--text-secondary);
   background:    var(--bg-secondary);
   border-radius: 6px;
-  padding:       2px 8px;
+  padding:       3px 9px;
   white-space:   nowrap;
   flex-shrink:   0;
 }
 
 .project-card-phase {
-  font-size:  13px;
+  font-size:  14px;
   color:      var(--text-secondary);
 }
 
 /* Current task label on card */
 .card-current-task {
-  font-size:     12px;
+  font-size:     13px;
   color:         var(--text-secondary);
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
-  min-height:    17px;
+  min-height:    19px;
 }
 
 /* Card footer row containing the 3-dot menu */
@@ -927,4 +927,186 @@ input[type="color"].form-input {
   font-size:   14px;
   color:       var(--text-secondary);
   line-height: 1.8;
+}
+
+/* ── Tasks page ──────────────────────────────────────────────────────────────── */
+
+/* Pop-in spring animation — item scales from small to slightly over then settles */
+@keyframes task-pop-in {
+  0%   { opacity: 0; transform: scale(0.82); }
+  55%  { opacity: 1; transform: scale(1.04); }
+  80%  { transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Add-task input row at top of tasks page */
+.tasks-add-row {
+  display:       flex;
+  gap:           12px;
+  margin-bottom: 32px;
+  align-items:   center;
+}
+
+.tasks-add-input {
+  flex:          1;
+  padding:       14px 18px;
+  border:        1px solid var(--border-color);
+  border-radius: 10px;
+  font-family:   var(--font);
+  font-size:     17px;
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
+  outline:       none;
+  transition:    border-color var(--transition), box-shadow var(--transition);
+}
+
+.tasks-add-input:focus {
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+.tasks-add-btn {
+  padding:       14px 22px;
+  border-radius: 10px;
+  font-size:     17px;
+  font-weight:   600;
+  white-space:   nowrap;
+}
+
+/* The scrollable list of task items */
+.tasks-list {
+  list-style: none;
+  display:    flex;
+  flex-direction: column;
+  gap:        10px;
+}
+
+/* Single task row */
+.task-item {
+  display:       flex;
+  align-items:   center;
+  gap:           16px;
+  background:    var(--bg-primary);
+  border:        1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding:       18px 20px;
+  cursor:        default;
+  transition:    box-shadow var(--transition), transform var(--transition), opacity var(--transition);
+  /* Animation is added via JS by setting animation-name + animation-delay */
+  animation-duration:        0.32s;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-fill-mode:       both;
+}
+
+.task-item:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+/* State when the item is being dragged */
+.task-item.task-dragging {
+  opacity: 0.4;
+  cursor:  grabbing;
+}
+
+/* Drop indicator lines */
+.task-item.drop-above { box-shadow: 0 -3px 0 0 var(--blue); }
+.task-item.drop-below { box-shadow: 0 3px 0 0 var(--blue); }
+
+/* Drag handle */
+.task-drag-handle {
+  color:       var(--border-color);
+  font-size:   18px;
+  cursor:      grab;
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+  transition:  color var(--transition);
+}
+
+.task-item:hover .task-drag-handle {
+  color: var(--text-secondary);
+}
+
+/* Checkbox */
+.task-checkbox {
+  width:         22px;
+  height:        22px;
+  border:        2px solid var(--border-color);
+  border-radius: 6px;
+  flex-shrink:   0;
+  cursor:        pointer;
+  display:       flex;
+  align-items:   center;
+  justify-content: center;
+  transition:    background var(--transition), border-color var(--transition);
+  background:    var(--bg-primary);
+}
+
+.task-checkbox.checked {
+  background:   var(--green);
+  border-color: var(--green);
+}
+
+.task-checkbox.checked::after {
+  content:     '';
+  display:     block;
+  width:       5px;
+  height:      9px;
+  border:      2px solid #fff;
+  border-top:  none;
+  border-left: none;
+  transform:   rotate(45deg) translateY(-1px);
+}
+
+/* Task text */
+.task-text {
+  flex:        1;
+  font-size:   19px;
+  font-weight: 500;
+  color:       var(--text-primary);
+  line-height: 1.4;
+  word-break:  break-word;
+}
+
+.task-item.task-done .task-text {
+  color:           var(--text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: var(--border-color);
+}
+
+/* Delete button on task row (appears on hover) */
+.task-delete-btn {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--border-color);
+  font-size:     18px;
+  line-height:   1;
+  padding:       2px 4px;
+  border-radius: 4px;
+  flex-shrink:   0;
+  transition:    color var(--transition);
+  opacity:       0;
+  pointer-events: none;
+}
+
+.task-item:hover .task-delete-btn {
+  opacity:        1;
+  pointer-events: auto;
+}
+
+.task-delete-btn:hover { color: var(--red); }
+
+/* Empty state for tasks list */
+.tasks-empty {
+  text-align:  center;
+  color:       var(--text-secondary);
+  font-size:   16px;
+  padding:     64px 0;
+  line-height: 1.7;
+}
+
+/* Dark mode task checkbox border */
+[data-theme="dark"] .task-checkbox {
+  background: var(--bg-secondary);
 }

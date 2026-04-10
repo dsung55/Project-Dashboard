@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks — Dashboard</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <script>
+    (function() {
+      try {
+        var cfg = JSON.parse(localStorage.getItem('dashboardTheme') || '{}');
+        var theme = cfg.theme || 'system';
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = theme === 'dark' || (theme === 'system' && prefersDark);
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">Dashboard</div>
+      <ul class="sidebar-nav">
+        <li><a href="index.html">Projects</a></li>
+        <li><a href="tasks.html" class="active">Tasks</a></li>
+        <li><a href="settings.html">Settings</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Tasks</h1>
+      </div>
+
+      <!-- Add task input row -->
+      <div class="tasks-add-row">
+        <input
+          class="tasks-add-input"
+          type="text"
+          id="tasks-add-input"
+          placeholder="Add a task…"
+          autocomplete="off"
+        >
+        <button class="btn btn-primary tasks-add-btn" id="tasks-add-btn">Add</button>
+      </div>
+
+      <!-- Task list — rendered by tasks.js -->
+      <ul class="tasks-list" id="tasks-list"></ul>
+
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="scripts/api.js"></script>
+  <script src="scripts/tasks.js"></script>
+</body>
+</html>
