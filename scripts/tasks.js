@@ -75,22 +75,22 @@ function calculateCumulativeDelay(index) {
 // Build and return a single task <li> element
 function buildItem(task) {
   const li = document.createElement('li');
-  li.className  = 'task-item' + (task.completed ? ' task-done' : '');
+  li.className  = 'gt-item' + (task.completed ? ' gt-done' : '');
   li.dataset.id = task.id;
   li.setAttribute('draggable', 'true');
 
   li.innerHTML = `
-    <span class="task-drag-handle" title="Drag to reorder">⠿</span>
-    <div class="task-checkbox${task.completed ? ' checked' : ''}" data-id="${task.id}" title="${task.completed ? 'Mark incomplete' : 'Mark complete'}"></div>
-    <span class="task-text">${escapeHtml(task.text)}</span>
-    <button class="task-delete-btn" data-id="${task.id}" title="Delete task">&#x2715;</button>
+    <span class="gt-drag-handle" title="Drag to reorder">⠿</span>
+    <div class="gt-checkbox${task.completed ? ' checked' : ''}" data-id="${task.id}" title="${task.completed ? 'Mark incomplete' : 'Mark complete'}"></div>
+    <span class="gt-text">${escapeHtml(task.text)}</span>
+    <button class="gt-delete-btn" data-id="${task.id}" title="Delete task">&#x2715;</button>
   `;
 
   // Checkbox toggles completion
-  li.querySelector('.task-checkbox').addEventListener('click', () => toggleComplete(task.id));
+  li.querySelector('.gt-checkbox').addEventListener('click', () => toggleComplete(task.id));
 
   // Delete button removes the task
-  li.querySelector('.task-delete-btn').addEventListener('click', (e) => {
+  li.querySelector('.gt-delete-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     deleteTask(task.id);
   });
@@ -117,7 +117,7 @@ function handleAdd() {
 
   // Re-render without stagger animation, then animate just the new item
   renderList(false);
-  const newEl = document.querySelector(`.task-item[data-id="${task.id}"]`);
+  const newEl = document.querySelector(`.gt-item[data-id="${task.id}"]`);
   if (newEl) {
     newEl.style.animationName  = 'task-pop-in';
     newEl.style.animationDelay = '0ms';
@@ -164,7 +164,7 @@ function debounceSave() {
 
 // Wire drag events onto all rendered task items
 function initDragAndDrop() {
-  document.querySelectorAll('.task-item').forEach(item => {
+  document.querySelectorAll('.gt-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);
     item.addEventListener('dragend',   handleDragEnd);
     item.addEventListener('dragover',  handleDragOver);
@@ -175,7 +175,7 @@ function initDragAndDrop() {
 
 function handleDragStart(e) {
   draggedId = this.dataset.id;
-  this.classList.add('task-dragging');
+  this.classList.add('gt-dragging');
   e.dataTransfer.effectAllowed = 'move';
 }
 
@@ -233,8 +233,8 @@ function clearDragIndicators() {
 }
 
 function clearDragStyles() {
-  document.querySelectorAll('.task-item.task-dragging')
-    .forEach(el => el.classList.remove('task-dragging'));
+  document.querySelectorAll('.gt-item.gt-dragging')
+    .forEach(el => el.classList.remove('gt-dragging'));
   clearDragIndicators();
   dropTargetEl = null;
 }

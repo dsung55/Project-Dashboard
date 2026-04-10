@@ -315,36 +315,36 @@ body {
 }
 
 .project-card-name {
-  font-size:   22px;
+  font-size:   25px;
   font-weight: 700;
   color:       var(--text-primary);
   line-height: 1.3;
 }
 
 .project-card-version {
-  font-size:     13px;
+  font-size:     14px;
   font-weight:   500;
   color:         var(--text-secondary);
   background:    var(--bg-secondary);
   border-radius: 6px;
-  padding:       3px 9px;
+  padding:       3px 10px;
   white-space:   nowrap;
   flex-shrink:   0;
 }
 
 .project-card-phase {
-  font-size:  14px;
+  font-size:  15px;
   color:      var(--text-secondary);
 }
 
 /* Current task label on card */
 .card-current-task {
-  font-size:     13px;
+  font-size:     14px;
   color:         var(--text-secondary);
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
-  min-height:    19px;
+  min-height:    20px;
 }
 
 /* Card footer row containing the 3-dot menu */
@@ -929,7 +929,7 @@ input[type="color"].form-input {
   line-height: 1.8;
 }
 
-/* ── Tasks page ──────────────────────────────────────────────────────────────── */
+/* ── Tasks page (global/misc tasks — prefixed gt- to avoid conflict with project.css) ── */
 
 /* Pop-in spring animation — item scales from small to slightly over then settles */
 @keyframes task-pop-in {
@@ -975,14 +975,14 @@ input[type="color"].form-input {
 
 /* The scrollable list of task items */
 .tasks-list {
-  list-style: none;
-  display:    flex;
+  list-style:     none;
+  display:        flex;
   flex-direction: column;
-  gap:        10px;
+  gap:            10px;
 }
 
-/* Single task row */
-.task-item {
+/* Single global-task row */
+.gt-item {
   display:       flex;
   align-items:   center;
   gap:           16px;
@@ -991,29 +991,25 @@ input[type="color"].form-input {
   border-radius: var(--radius);
   padding:       18px 20px;
   cursor:        default;
-  transition:    box-shadow var(--transition), transform var(--transition), opacity var(--transition);
-  /* Animation is added via JS by setting animation-name + animation-delay */
+  transition:    box-shadow var(--transition), opacity var(--transition);
+  /* Animation name + delay are set by JS per-item */
   animation-duration:        0.32s;
   animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   animation-fill-mode:       both;
 }
 
-.task-item:hover {
-  box-shadow: var(--shadow-hover);
-}
+.gt-item:hover { box-shadow: var(--shadow-hover); }
 
-/* State when the item is being dragged */
-.task-item.task-dragging {
+.gt-item.gt-dragging {
   opacity: 0.4;
   cursor:  grabbing;
 }
 
-/* Drop indicator lines */
-.task-item.drop-above { box-shadow: 0 -3px 0 0 var(--blue); }
-.task-item.drop-below { box-shadow: 0 3px 0 0 var(--blue); }
+.gt-item.drop-above { box-shadow: 0 -3px 0 0 var(--blue); }
+.gt-item.drop-below { box-shadow: 0  3px 0 0 var(--blue); }
 
 /* Drag handle */
-.task-drag-handle {
+.gt-drag-handle {
   color:       var(--border-color);
   font-size:   18px;
   cursor:      grab;
@@ -1023,31 +1019,29 @@ input[type="color"].form-input {
   transition:  color var(--transition);
 }
 
-.task-item:hover .task-drag-handle {
-  color: var(--text-secondary);
-}
+.gt-item:hover .gt-drag-handle { color: var(--text-secondary); }
 
 /* Checkbox */
-.task-checkbox {
-  width:         22px;
-  height:        22px;
-  border:        2px solid var(--border-color);
-  border-radius: 6px;
-  flex-shrink:   0;
-  cursor:        pointer;
-  display:       flex;
-  align-items:   center;
+.gt-checkbox {
+  width:           22px;
+  height:          22px;
+  border:          2px solid var(--border-color);
+  border-radius:   6px;
+  flex-shrink:     0;
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
   justify-content: center;
-  transition:    background var(--transition), border-color var(--transition);
-  background:    var(--bg-primary);
+  transition:      background var(--transition), border-color var(--transition);
+  background:      var(--bg-primary);
 }
 
-.task-checkbox.checked {
+.gt-checkbox.checked {
   background:   var(--green);
   border-color: var(--green);
 }
 
-.task-checkbox.checked::after {
+.gt-checkbox.checked::after {
   content:     '';
   display:     block;
   width:       5px;
@@ -1059,7 +1053,7 @@ input[type="color"].form-input {
 }
 
 /* Task text */
-.task-text {
+.gt-text {
   flex:        1;
   font-size:   19px;
   font-weight: 500;
@@ -1068,36 +1062,36 @@ input[type="color"].form-input {
   word-break:  break-word;
 }
 
-.task-item.task-done .task-text {
-  color:           var(--text-secondary);
-  text-decoration: line-through;
+.gt-item.gt-done .gt-text {
+  color:                 var(--text-secondary);
+  text-decoration:       line-through;
   text-decoration-color: var(--border-color);
 }
 
-/* Delete button on task row (appears on hover) */
-.task-delete-btn {
-  background:    transparent;
-  border:        none;
-  cursor:        pointer;
-  color:         var(--border-color);
-  font-size:     18px;
-  line-height:   1;
-  padding:       2px 4px;
-  border-radius: 4px;
-  flex-shrink:   0;
-  transition:    color var(--transition);
-  opacity:       0;
+/* Delete button — visible on hover */
+.gt-delete-btn {
+  background:     transparent;
+  border:         none;
+  cursor:         pointer;
+  color:          var(--border-color);
+  font-size:      18px;
+  line-height:    1;
+  padding:        2px 4px;
+  border-radius:  4px;
+  flex-shrink:    0;
+  transition:     color var(--transition);
+  opacity:        0;
   pointer-events: none;
 }
 
-.task-item:hover .task-delete-btn {
+.gt-item:hover .gt-delete-btn {
   opacity:        1;
   pointer-events: auto;
 }
 
-.task-delete-btn:hover { color: var(--red); }
+.gt-delete-btn:hover { color: var(--red); }
 
-/* Empty state for tasks list */
+/* Empty state */
 .tasks-empty {
   text-align:  center;
   color:       var(--text-secondary);
@@ -1106,7 +1100,5 @@ input[type="color"].form-input {
   line-height: 1.7;
 }
 
-/* Dark mode task checkbox border */
-[data-theme="dark"] .task-checkbox {
-  background: var(--bg-secondary);
-}
+/* Dark mode checkbox background */
+[data-theme="dark"] .gt-checkbox { background: var(--bg-secondary); }
