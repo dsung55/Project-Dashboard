@@ -3,6 +3,20 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5 — Timeline View & UI Polish
+
+- **Timeline view:** New "Timeline" button in the project header opens a full-width modal showing all tasks and sub-tasks plotted on a horizontal date axis
+- **Task vs sub-task sizing:** Tasks appear as larger boxes with the project color bar; sub-tasks are smaller and more subtle
+- **Completed task styling:** Completed items animate in greyed out (45% opacity) — still legible, clearly distinct from active tasks
+- **Today line:** A blue vertical "Today" line shows where the current date falls relative to all task due dates
+- **Undated zone:** Tasks and sub-tasks without a due date appear in a separated "No Due Date" zone on the right
+- **Timeline animation:** Items reveal left to right with a spring pop-in that starts slow and accelerates — mirrors the Tasks page stagger style
+- **"Order by Date" relocated:** Moved from the project header to the top-right corner of the Tasks section card
+- **"Timeline" button placement:** Sits in the project header to the right of "Undo", where "Order by Date" previously was
+- **Fix — version badge overlap:** The delete × button on dashboard card hover no longer overlaps the version badge (added right margin to the header-right area)
+- **Fix — color swatch height:** The vertical project color bar on the detail page now stretches to match the full height of the project name and metadata row
+- **Tasks page animation tuned:** Stagger starts at 120ms (up from 60ms) and decays at 0.62× (down from 0.72×) for a slower, more dramatic acceleration
+
 ## v1.4.1 — Sub-task Improvements & Date Validation
 
 - **Sub-task completion:** Sub-items now have checkboxes — click to mark them done, completed sub-items appear grayed out with a strikethrough

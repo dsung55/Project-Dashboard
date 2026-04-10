@@ -58,7 +58,7 @@
               <button class="btn btn-secondary" id="btn-undo">Undo</button>
             </div>
             <div class="project-meta-item">
-              <button class="btn btn-secondary" id="btn-order-by-date">Order by Date</button>
+              <button class="btn btn-secondary" id="btn-timeline">Timeline</button>
             </div>
           </div>
         </div>
@@ -71,7 +71,10 @@
         <!-- Left column: tasks -->
         <div class="project-main">
           <div class="section-card">
-            <div class="section-card-title">Tasks</div>
+            <div class="section-card-title-row">
+              <div class="section-card-title">Tasks</div>
+              <button class="btn btn-secondary btn-sm" id="btn-order-by-date">Order by Date</button>
+            </div>
 
             <!-- Add task row -->
             <div class="task-add-row">
@@ -155,6 +158,19 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="btn-cancel-delete-project">Cancel</button>
         <button type="button" class="btn btn-danger" id="btn-confirm-delete-project">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline modal -->
+  <div class="modal-overlay timeline-overlay" id="modal-timeline">
+    <div class="timeline-modal">
+      <div class="timeline-modal-header">
+        <div class="timeline-modal-title" id="timeline-modal-title">Timeline</div>
+        <button class="btn btn-secondary" id="btn-close-timeline">Close</button>
+      </div>
+      <div class="timeline-scroll-wrap">
+        <div class="timeline-track" id="timeline-track"></div>
       </div>
     </div>
   </div>

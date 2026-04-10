@@ -79,12 +79,12 @@ function renderList(animate) {
 }
 
 // Compute the start time for item at a given index by summing up prior item delays
-// Each item's delay slot is 60ms * 0.72^i, but capped so the total sequence stays snappy
+// Starts slow (120ms first slot) and accelerates rapidly — minimum slot 10ms
 function calculateCumulativeDelay(index) {
   let total = 0;
   for (let i = 0; i < index; i++) {
-    // Each slot gets exponentially shorter; minimum slot is 18ms
-    total += Math.max(18, Math.round(60 * Math.pow(0.72, i)));
+    // Each slot shrinks by 62% — steep curve so later items blur together
+    total += Math.max(10, Math.round(120 * Math.pow(0.62, i)));
   }
   return total;
 }

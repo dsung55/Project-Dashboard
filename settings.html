@@ -74,24 +74,39 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.5</div>
+          <ul class="update-log-list">
+            <li>New Timeline view — click "Timeline" on any project to see all tasks and sub-tasks plotted on a horizontal date axis</li>
+            <li>Tasks appear as larger boxes, sub-tasks as smaller boxes; completed items are greyed out but still legible</li>
+            <li>A "Today" line marks the current date so you can see which tasks are past, present, and future</li>
+            <li>Tasks without a due date collect in a "No Due Date" zone on the right side of the timeline</li>
+            <li>Timeline items animate in left to right with a spring effect that starts slow and accelerates</li>
+            <li>"Order by Date" button moved to the top-right corner of the Tasks box for easier access</li>
+            <li>"Timeline" button appears in the project header to the right of "Undo"</li>
+            <li>Fixed: delete (×) button no longer overlaps the version badge when hovering a project card</li>
+            <li>Fixed: project color bar on the detail page now spans the full height of the name and metadata</li>
+            <li>Tasks page animation now starts slower and accelerates more dramatically for a snappier feel</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.4.2</div>
           <ul class="update-log-list">
             <li>Sidebar "Home" tab renamed to "Projects" for consistency</li>
-            <li>New "Tasks" tab added between Projects and Settings — a dedicated space for miscellaneous tasks not tied to any project</li>
-            <li>Tasks page features large, easy-to-read task rows with checkboxes, drag-to-reorder handles, and a clean add-task input</li>
-            <li>Tasks animate in with a spring pop-in effect when the page loads — each item appears sequentially with exponentially decreasing delay</li>
-            <li>Project card text sizes increased across the board for improved readability</li>
+            <li>New "Tasks" tab added — a dedicated space for miscellaneous tasks not tied to any project</li>
+            <li>Tasks page features large task rows with checkboxes and drag-to-reorder handles</li>
+            <li>Tasks animate in with a spring pop-in effect on page load</li>
+            <li>Project card text sizes increased for improved readability</li>
           </ul>
         </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.4.1</div>
           <ul class="update-log-list">
-            <li>Sub-items now have checkboxes — click to mark them done, completed sub-items appear grayed out with a strikethrough</li>
-            <li>Double-click any sub-item to edit its text and set a due date; a badge displays the date on the row when set</li>
+            <li>Sub-items now have checkboxes — completed sub-items appear grayed out with a strikethrough</li>
+            <li>Double-click any sub-item to edit its text and set a due date</li>
             <li>New sub-items now appear below the entry box instead of above it</li>
             <li>Sub-item rows are now borderless — cleaner, easier to scan</li>
-            <li>Month input in all due-date fields is now wide enough to show the full placeholder</li>
             <li>Date fields only accept numbers; Month clamps to 1–12 and Day clamps to 1–31</li>
           </ul>
         </div>
@@ -99,12 +114,10 @@
         <div class="update-log-entry">
           <div class="update-log-version">v1.4</div>
           <ul class="update-log-list">
-            <li>Tasks now support due dates — enter Month/Day/Year in the expanded panel; the date appears as a badge on the task row</li>
-            <li>Set a due date while creating a task using the date boxes in the add-task row</li>
-            <li>New "Order by Date" button in the project header sorts unfinished tasks by due date (closest first), undated tasks go to the bottom</li>
-            <li>New "Undo" button in the project header reverts your last action — add, delete, complete, drag, rename, or sort (up to 20 steps)</li>
+            <li>Tasks now support due dates — the date appears as a badge on the task row</li>
+            <li>New "Order by Date" button sorts unfinished tasks by due date, undated tasks go to the bottom</li>
+            <li>New "Undo" button reverts your last action — up to 20 steps</li>
             <li>Double-click any task name to edit it inline; press Enter to save or Escape to cancel</li>
-            <li>Delete Project button no longer shows in red — matches the style of other buttons</li>
             <li>Sidebar navigation tabs now show subtle outlines for clearer visual structure</li>
           </ul>
         </div>
@@ -112,22 +125,19 @@
         <div class="update-log-entry">
           <div class="update-log-version">v1.3.1</div>
           <ul class="update-log-list">
-            <li>Project color can now be changed after creation — click the color dot next to the version field on the project page</li>
-            <li>Custom color dialog now opens centered on screen instead of in the corner</li>
-            <li>Project purpose on dashboard cards now always reflects the latest saved value — fixed cases where it showed "No purpose set" even when a purpose existed</li>
+            <li>Project color can now be changed after creation — click the color dot next to the version field</li>
+            <li>Custom color dialog now opens centered on screen</li>
+            <li>Fixed: project purpose on dashboard cards always reflects the latest saved value</li>
           </ul>
         </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.3</div>
           <ul class="update-log-list">
-            <li>Active tasks can now be dragged to reorder them — grab the ⠿ handle on any task row</li>
+            <li>Active tasks can now be dragged to reorder — grab the ⠿ handle on any task row</li>
             <li>Sub-items now display as individual outlined cards instead of plain bullet points</li>
-            <li>Adding a sub-item no longer closes the task panel — stay in the panel to add multiple sub-items at once</li>
-            <li>Sub-items within a task can also be reordered by dragging the ⠿ handle</li>
-            <li>Projects created in the "In Progress" or "Testing" phase now correctly appear in the In Progress section immediately</li>
-            <li>Dashboard "Ongoing" section renamed to "In Progress" to match the phase list</li>
-            <li>Project cards can be dragged to reorder them within their section — order saves automatically</li>
+            <li>Sub-items within a task can also be reordered by dragging</li>
+            <li>Project cards can be dragged to reorder within their section — order saves automatically</li>
             <li>Drag a project card to a different section to instantly move it and update its phase</li>
           </ul>
         </div>
@@ -135,17 +145,17 @@
         <div class="update-log-entry">
           <div class="update-log-version">v1.2.3</div>
           <ul class="update-log-list">
-            <li>Dashboard now auto-refreshes when you return from a project page — current task and other changes appear immediately without a manual reload</li>
-            <li>Fixed stale current-task display caused by browser back-forward cache freezing a mid-flight refresh</li>
-            <li>Dashboard project list is no longer cached by the browser — always fetches the latest data from the server</li>
+            <li>Dashboard now auto-refreshes when you return from a project page</li>
+            <li>Fixed stale current-task display caused by browser back-forward cache</li>
+            <li>Dashboard project list is no longer cached — always fetches the latest data</li>
           </ul>
         </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.2.2</div>
           <ul class="update-log-list">
-            <li>Current task on dashboard cards now correctly shows the active task — fixed a data migration issue where older project entries were missing the field</li>
-            <li>New Project button is now clearly visible in dark mode (black background, white text)</li>
+            <li>Fixed: current task on dashboard cards now correctly shows the active task</li>
+            <li>New Project button is now clearly visible in dark mode</li>
           </ul>
         </div>
 
@@ -156,21 +166,18 @@
             <li>Color palette updated to 15 visually distinct hues with no near-duplicates</li>
             <li>New project version field now pre-fills with "v1.0" by default</li>
             <li>Dark mode hover and active states fixed for sidebar, ghost buttons, and card menus</li>
-            <li>Section box fills are now more subtle — border stands out over background</li>
             <li>Dashboard sections are hidden entirely when they contain no projects</li>
-            <li>Search filter also hides sections when no cards match</li>
           </ul>
         </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.2</div>
           <ul class="update-log-list">
-            <li>Color picker replaced with a Google Calendar-style grid of 15 preset swatches plus a custom color option</li>
-            <li>Dashboard status sections and page header now have a visible outline box for better organization</li>
+            <li>Color picker replaced with a grid of 15 preset swatches plus a custom color option</li>
+            <li>Dashboard status sections and page header now have a visible outline box</li>
             <li>Project card name font size increased for stronger visual hierarchy</li>
+            <li>Real-time search bar added to filter projects by name</li>
             <li>Current task label on cards is now bold</li>
-            <li>Real-time search bar added above the dashboard to filter projects by name</li>
-            <li>3-dot purpose panel now shows a "Purpose" heading</li>
           </ul>
         </div>
 
@@ -179,13 +186,8 @@
           <ul class="update-log-list">
             <li>Light / Dark / System color theme setting</li>
             <li>Project Purpose field on project detail page</li>
-            <li>Dashboard cards now show the current (next up) task instead of a progress bar</li>
-            <li>First incomplete task is bolded on the project detail page</li>
+            <li>Dashboard cards now show the current task instead of a progress bar</li>
             <li>3-dot button on cards expands to show the project purpose</li>
-            <li>Delete project button added to the project detail page</li>
-            <li>Completed tasks no longer show strikethrough — greyed out only</li>
-            <li>Project title size increased on detail page</li>
-            <li>Cleaner placeholder text on task and note inputs</li>
             <li>Update Log added to Settings</li>
           </ul>
         </div>
