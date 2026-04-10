@@ -3,6 +3,18 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.1 — Timeline Polish & Version Field Removal
+
+- **Version field removed:** Version numbers no longer appear on project cards or the project detail page — add it to the project title if needed
+- **Smaller card titles:** Project card names on the dashboard are now 19px (down from 25px) for a cleaner, less crowded look
+- **Thicker timeline baseline:** The horizontal timeline axis is now 5px thick (up from 3px)
+- **Larger timeline dots:** Pin dots are 16px (up from 11px) for main tasks; sub-task dots remain smaller (10px) to stay visually distinct
+- **More vertical spacing on timeline:** Stems are taller (STEM_BASE 40px, LEVEL_STEP 78px) so items have more breathing room
+- **Zoom-out limit:** Timeline can no longer be zoomed out past showing the full date range (oldest task at left, newest at right)
+- **Halved zoom sensitivity:** Scroll-to-zoom is half as fast, making precise zooming easier
+- **Month tick marks:** Unlabelled tick marks appear on the timeline baseline at each month boundary within the project date range
+- **Sub-task pin sizing:** Sub-tasks appear with smaller dots and smaller label text than main tasks, making the hierarchy visually clear
+
 ## v1.5 — Timeline View & UI Polish
 
 - **Timeline view:** New "Timeline" button in the project header opens a full-width modal showing all tasks and sub-tasks plotted on a horizontal date axis

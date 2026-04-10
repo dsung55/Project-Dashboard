@@ -129,7 +129,6 @@ function buildCard(project) {
     <div class="project-card-header">
       <div class="project-card-name">${escapeHtml(project.name)}</div>
       <div class="project-card-header-right">
-        <div class="project-card-version">${escapeHtml(project.version || 'v1.0')}</div>
         <button class="card-color-btn" data-id="${project.id}" title="Change color"></button>
       </div>
     </div>
@@ -419,10 +418,9 @@ function closeCreateModal() {
 // Handle create form submission
 async function handleCreate(e) {
   e.preventDefault();
-  const name    = document.getElementById('new-project-name').value.trim();
-  const color   = document.getElementById('new-project-color').value;
-  const phase   = document.getElementById('new-project-phase').value;
-  const version = document.getElementById('new-project-version').value.trim() || 'v1.0';
+  const name  = document.getElementById('new-project-name').value.trim();
+  const color = document.getElementById('new-project-color').value;
+  const phase = document.getElementById('new-project-phase').value;
 
   if (!name) return;
 
@@ -431,8 +429,7 @@ async function handleCreate(e) {
       id: crypto.randomUUID(),
       name,
       color,
-      phase,
-      version
+      phase
     });
     allProjects.push({
       ...project,

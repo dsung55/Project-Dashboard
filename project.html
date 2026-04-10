@@ -47,10 +47,6 @@
               <select class="meta-select" id="project-phase"></select>
             </div>
             <div class="project-meta-item">
-              <span class="meta-label">Version</span>
-              <input class="meta-input" type="text" id="project-version" placeholder="v1.0">
-            </div>
-            <div class="project-meta-item">
               <span class="meta-label">Color</span>
               <button class="project-color-btn" id="project-color-btn" title="Change project color"></button>
             </div>
@@ -166,7 +162,10 @@
   <div class="modal-overlay timeline-overlay" id="modal-timeline">
     <div class="timeline-modal">
       <div class="timeline-modal-header">
-        <div class="timeline-modal-title" id="timeline-modal-title">Timeline</div>
+        <div style="display:flex;align-items:center;gap:0">
+          <div class="timeline-modal-title" id="timeline-modal-title">Timeline</div>
+          <span class="tl-hint">Scroll to zoom · Drag to pan</span>
+        </div>
         <button class="btn btn-secondary" id="btn-close-timeline">Close</button>
       </div>
       <div class="timeline-scroll-wrap">

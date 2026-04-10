@@ -257,14 +257,6 @@ function renderHeader() {
     phaseEl.addEventListener('change', handlePhaseChange);
   }
 
-  // Version input
-  const versionEl = document.getElementById('project-version');
-  if (versionEl) {
-    versionEl.value = p.version || 'v1.0';
-    versionEl.addEventListener('blur', handleVersionBlur);
-    versionEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') versionEl.blur(); });
-  }
-
   // Color dot — set background to project color and open picker on click
   const colorBtn = document.getElementById('project-color-btn');
   if (colorBtn) {
@@ -606,6 +598,7 @@ function enterSubItemEdit(rowEl, task, sub) {
 // Wire HTML5 drag-and-drop on active task items to allow reordering
 function initTaskDrag(list, activeTasks) {
   let draggedTaskId = null;
+  let lastDropTarget = null; // track the highlighted element to avoid querySelectorAll on every dragover
 
   const items = list.querySelectorAll('.task-item[draggable="true"]');
   items.forEach(item => {
@@ -617,8 +610,12 @@ function initTaskDrag(list, activeTasks) {
 
     item.addEventListener('dragend', () => {
       draggedTaskId = null;
-      list.querySelectorAll('.drop-before, .drop-after, .task-dragging')
-        .forEach(el => el.classList.remove('drop-before', 'drop-after', 'task-dragging'));
+      if (lastDropTarget) {
+        lastDropTarget.classList.remove('drop-before', 'drop-after');
+        lastDropTarget = null;
+      }
+      list.querySelectorAll('.task-dragging')
+        .forEach(el => el.classList.remove('task-dragging'));
     });
 
     item.addEventListener('dragover', (e) => {
@@ -627,14 +624,19 @@ function initTaskDrag(list, activeTasks) {
       // Determine above or below based on cursor Y relative to item midpoint
       const rect    = item.getBoundingClientRect();
       const isAbove = e.clientY < rect.top + rect.height / 2;
-      list.querySelectorAll('.drop-before, .drop-after')
-        .forEach(el => el.classList.remove('drop-before', 'drop-after'));
-      item.classList.add(isAbove ? 'drop-before' : 'drop-after');
+      // Clear only the previously highlighted element — no full-list querySelectorAll
+      if (lastDropTarget && lastDropTarget !== item) {
+        lastDropTarget.classList.remove('drop-before', 'drop-after');
+      }
+      item.classList.toggle('drop-before',  isAbove);
+      item.classList.toggle('drop-after',  !isAbove);
+      lastDropTarget = item;
     });
 
     item.addEventListener('dragleave', (e) => {
       if (!item.contains(e.relatedTarget)) {
         item.classList.remove('drop-before', 'drop-after');
+        if (lastDropTarget === item) lastDropTarget = null;
       }
     });
 
@@ -674,6 +676,7 @@ function initSubItemDrag(taskItemEl, task) {
   if (!subList) return;
 
   let draggedIndex = null;
+  let lastSubDropTarget = null; // track the highlighted row to avoid querySelectorAll on every dragover
 
   subList.querySelectorAll('.sub-item-row').forEach(row => {
     row.addEventListener('dragstart', (e) => {
@@ -685,9 +688,12 @@ function initSubItemDrag(taskItemEl, task) {
 
     row.addEventListener('dragend', () => {
       draggedIndex = null;
-      subList.querySelectorAll('.sub-dragging, .drop-before, .drop-after').forEach(el => {
-        el.classList.remove('sub-dragging', 'drop-before', 'drop-after');
-      });
+      if (lastSubDropTarget) {
+        lastSubDropTarget.classList.remove('drop-before', 'drop-after');
+        lastSubDropTarget = null;
+      }
+      subList.querySelectorAll('.sub-dragging')
+        .forEach(el => el.classList.remove('sub-dragging'));
     });
 
     row.addEventListener('dragover', (e) => {
@@ -695,18 +701,21 @@ function initSubItemDrag(taskItemEl, task) {
       e.stopPropagation();
       const idx = parseInt(row.dataset.subIndex, 10);
       if (idx === draggedIndex) return;
-      // Clear previous indicators, then show above/below line based on cursor Y vs row midpoint
-      subList.querySelectorAll('.drop-before, .drop-after').forEach(el => {
-        el.classList.remove('drop-before', 'drop-after');
-      });
+      // Clear only the previously highlighted row — no full-list querySelectorAll
+      if (lastSubDropTarget && lastSubDropTarget !== row) {
+        lastSubDropTarget.classList.remove('drop-before', 'drop-after');
+      }
       const rect    = row.getBoundingClientRect();
-      const isAbove = e.clientY < rect.top + rect.height / 2;
-      row.classList.add(isAbove ? 'drop-before' : 'drop-after');
+      const isAbove = e.clientY < rect.top + row.offsetHeight / 2;
+      row.classList.toggle('drop-before',  isAbove);
+      row.classList.toggle('drop-after',  !isAbove);
+      lastSubDropTarget = row;
     });
 
     row.addEventListener('dragleave', (e) => {
       if (!row.contains(e.relatedTarget)) {
         row.classList.remove('drop-before', 'drop-after');
+        if (lastSubDropTarget === row) lastSubDropTarget = null;
       }
     });
 
@@ -835,12 +844,13 @@ async function saveAndRender() {
   const notesEl = document.getElementById('project-notes');
   if (notesEl) projectData.notes = notesEl.value;
 
+  // Render immediately from in-memory state — no need to wait for the network round-trip
+  const currentTask = (projectData.tasks || []).find(t => !t.completed)?.text ?? null;
+  sessionStorage.setItem('ct_' + projectId, JSON.stringify(currentTask));
+  renderTasks();
+
   try {
     projectData = await api.saveProject(projectId, projectData);
-    // Write the current task into sessionStorage so the dashboard picks it up immediately
-    const currentTask = (projectData.tasks || []).find(t => !t.completed)?.text ?? null;
-    sessionStorage.setItem('ct_' + projectId, JSON.stringify(currentTask));
-    renderTasks();
   } catch (err) {
     showToast('Could not save: ' + err.message, true);
   }
@@ -905,20 +915,6 @@ async function handlePhaseChange(e) {
     showToast('Phase updated');
   } catch (err) {
     showToast('Could not save phase: ' + err.message, true);
-  }
-}
-
-// Save when the version input loses focus
-async function handleVersionBlur(e) {
-  const newVersion = e.target.value.trim() || 'v1.0';
-  e.target.value   = newVersion;
-  if (newVersion === projectData.version) return;
-  projectData.version = newVersion;
-  try {
-    projectData = await api.saveProject(projectId, projectData);
-    showToast('Version updated');
-  } catch (err) {
-    showToast('Could not save version: ' + err.message, true);
   }
 }
 
@@ -1120,10 +1116,20 @@ async function handleDeleteProjectConfirm() {
 
 // ── Timeline ──────────────────────────────────────────────────────────────────
 
-// Open the timeline modal and render it
+// Module-level state — persists across renders so zoom/pan survives re-renders
+let tlViewStart = 0;    // fraction of data range visible at left edge of viewport
+let tlViewEnd   = 1;    // fraction of data range visible at right edge of viewport
+let tlMinDate   = null; // cached earliest task date (Date object)
+let tlMaxDate   = null; // cached latest task date (Date object)
+let tlRange     = 0;    // tlMaxDate - tlMinDate in ms
+let tlDragState = null; // { x, viewStart, viewEnd } while dragging, null otherwise
+
+// Open the timeline modal — resets zoom/pan so all tasks are visible
 function openTimeline() {
   const overlay = document.getElementById('modal-timeline');
   if (!overlay) return;
+  tlViewStart = 0;
+  tlViewEnd   = 1;
   overlay.style.display = 'flex';
   renderTimeline();
 }
@@ -1134,21 +1140,55 @@ function closeTimeline() {
   if (overlay) overlay.style.display = 'none';
 }
 
-// Compute cumulative animation delay for timeline items (slow start, fast finish)
-// Same exponential curve as tasks.js but tuned for horizontal reveal
-function tlCumulativeDelay(index) {
+// Build cumulative animation delays for `count` timeline items in a single O(n) pass
+function buildTlDelays(count) {
+  const delays = new Array(count);
   let total = 0;
-  for (let i = 0; i < index; i++) {
-    total += Math.max(10, Math.round(120 * Math.pow(0.62, i)));
+  for (let i = 0; i < count; i++) {
+    delays[i] = total;
+    total += Math.max(10, Math.round(120 * Math.pow(0.82, i)));
   }
-  return total;
+  return delays;
 }
 
-// Build and render all tasks + sub-items onto the timeline track
+// Assign a { side, level } to each item using a greedy collision-avoidance algorithm.
+// Items too close horizontally at the same side+level get bumped to the next level.
+function computePlacements(datedItems, dateToPct, trackW) {
+  const LABEL_W_PX = 128; // estimated max label pixel width
+  const placed = [];       // { pct, side, level } for already-assigned items
+
+  return datedItems.map((item, idx) => {
+    const pct        = dateToPct(item.date);
+    const minGapPct  = (LABEL_W_PX / trackW) * 100;
+    const preferSide = idx % 2 === 0 ? 'above' : 'below';
+    const sides      = [preferSide, preferSide === 'above' ? 'below' : 'above'];
+
+    for (let level = 0; level < 8; level++) {
+      for (const side of sides) {
+        const hasConflict = placed.some(p =>
+          p.side === side && p.level === level && Math.abs(p.pct - pct) < minGapPct
+        );
+        if (!hasConflict) {
+          placed.push({ pct, side, level });
+          return { item, pct, side, level };
+        }
+      }
+    }
+    // Absolute fallback — should never be reached in practice
+    placed.push({ pct, side: preferSide, level: 7 });
+    return { item, pct, side: preferSide, level: 7 };
+  });
+}
+
+// Build and render all tasks onto the timeline.
+// Supports zoom (wheel) and pan (drag) via tlViewStart / tlViewEnd state.
 function renderTimeline() {
   const track = document.getElementById('timeline-track');
   if (!track) return;
   track.innerHTML = '';
+
+  const wrap = track.closest('.timeline-scroll-wrap');
+  wrap?.querySelector('.tl-undated-section')?.remove();
 
   const projectColor = projectData.color || '#4A90D9';
 
@@ -1156,221 +1196,317 @@ function renderTimeline() {
   const titleEl = document.getElementById('timeline-modal-title');
   if (titleEl) titleEl.textContent = (projectData.name || 'Project') + ' — Timeline';
 
-  // Collect all dated and undated items from tasks and sub-items
-  const tasks = projectData.tasks || [];
-  const datedItems   = []; // { type:'task'|'subtask', obj, parentObj|null, date }
-  const undatedItems = []; // { type:'task'|'subtask', obj, parentObj|null }
+  // Collect dated and undated items from tasks and sub-items
+  const tasks        = projectData.tasks || [];
+  const datedItems   = [];
+  const undatedItems = [];
 
   tasks.forEach(task => {
     const d = parseDueDate(task.dueDate);
-    if (d) {
-      datedItems.push({ type: 'task', obj: task, parent: null, date: d });
-    } else {
-      undatedItems.push({ type: 'task', obj: task, parent: null });
-    }
+    if (d) datedItems.push({ type: 'task', obj: task, date: d });
+    else   undatedItems.push({ type: 'task', obj: task });
     (task.subItems || []).forEach(sub => {
       const sd = parseDueDate(sub.dueDate);
-      if (sd) {
-        datedItems.push({ type: 'subtask', obj: sub, parent: task, date: sd });
-      } else {
-        undatedItems.push({ type: 'subtask', obj: sub, parent: task });
-      }
+      if (sd) datedItems.push({ type: 'subtask', obj: sub, date: sd });
+      else    undatedItems.push({ type: 'subtask', obj: sub });
     });
   });
 
-  // Sort dated items chronologically for both layout and animation order
   datedItems.sort((a, b) => a.date - b.date);
 
-  // ── Compute date range ───────────────────────────────────────────────────────
+  // ── Empty state ───────────────────────────────────────────────────────────────
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let minDate, maxDate;
   if (datedItems.length === 0) {
-    // No dates at all — fake a 30-day window centred on today
-    minDate = new Date(today); minDate.setDate(minDate.getDate() - 7);
-    maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + 23);
-  } else {
-    minDate = new Date(datedItems[0].date);
-    maxDate = new Date(datedItems[datedItems.length - 1].date);
-    // Ensure today is always visible inside the range
-    if (today < minDate) minDate = new Date(today);
-    if (today > maxDate) maxDate = new Date(today);
-    // Pad 10 days on each side for breathing room
-    minDate.setDate(minDate.getDate() - 10);
-    maxDate.setDate(maxDate.getDate() + 10);
+    const empty = document.createElement('div');
+    empty.className   = 'tl-empty';
+    empty.textContent = 'No tasks have due dates yet. Add a due date to any task to see it on the timeline.';
+    track.appendChild(empty);
+    if (undatedItems.length > 0 && wrap) wrap.appendChild(buildUndatedSection(undatedItems));
+    return;
   }
 
-  const dayRange   = Math.max(30, Math.round((maxDate - minDate) / 86400000));
-  const pxPerDay   = 80; // horizontal pixels per day
-  const trackWidth = dayRange * pxPerDay;
+  // ── Cache date range ──────────────────────────────────────────────────────────
 
-  // Reserve space on the right for the undated zone
-  const undatedZoneWidth = undatedItems.length > 0 ? 240 : 0;
-  const totalWidth = trackWidth + undatedZoneWidth + 80;
+  tlMinDate = datedItems[0].date;
+  tlMaxDate = datedItems[datedItems.length - 1].date;
+  tlRange   = tlMaxDate - tlMinDate;
 
-  track.style.width  = totalWidth + 'px';
-  track.style.height = ''; // will grow naturally
+  // Convert a Date to a percentage position within the current viewport
+  function dateToPct(date) {
+    if (tlRange === 0) return 50;
+    const frac = (date - tlMinDate) / tlRange;
+    return ((frac - tlViewStart) / (tlViewEnd - tlViewStart)) * 100;
+  }
 
-  // ── Baseline ─────────────────────────────────────────────────────────────────
+  // ── Track pixel width — used for collision detection in pixel space ───────────
 
-  const baselineTop = 80; // px from top where the baseline sits
+  const hPad   = 64; // horizontal padding each side (matches CSS)
+  const trackW = Math.max(400, (wrap?.clientWidth || 900) - hPad * 2);
 
-  const baseline = document.createElement('div');
-  baseline.className = 'tl-baseline';
-  baseline.style.top = baselineTop + 'px';
+  // ── Compute placements with vertical collision avoidance ──────────────────────
+
+  const STEM_BASE  = 40; // minimum stem height in px
+  const LEVEL_STEP = 78; // additional px per level
+  const LABEL_H    = 46; // approximate label height in px
+  const EDGE_PAD   = 28; // breathing room above/below the outermost labels
+
+  const placements = computePlacements(datedItems, dateToPct, trackW);
+
+  // ── Dynamic track height based on max levels used ────────────────────────────
+
+  let maxAbove = 0, maxBelow = 0;
+  placements.forEach(p => {
+    if (p.side === 'above') maxAbove = Math.max(maxAbove, p.level);
+    else                    maxBelow = Math.max(maxBelow, p.level);
+  });
+
+  const aboveH   = EDGE_PAD + LABEL_H + STEM_BASE + maxAbove * LEVEL_STEP;
+  const belowH   = EDGE_PAD + LABEL_H + STEM_BASE + maxBelow * LEVEL_STEP;
+  const trackH   = aboveH + belowH + 4; // +4 for the baseline thickness
+  const baselineY = aboveH;
+
+  track.style.height = trackH + 'px';
+
+  // ── Baseline (thick horizontal center line) ───────────────────────────────────
+
+  const baseline = Object.assign(document.createElement('div'), { className: 'tl-baseline' });
+  baseline.style.top = baselineY + 'px';
   track.appendChild(baseline);
 
-  // ── Helper: convert a Date to a pixel X position ─────────────────────────────
-  function dateToX(date) {
-    const days = (date - minDate) / 86400000;
-    return Math.round(days * pxPerDay);
+  // ── Month tick marks — one unlabelled tick per month boundary ────────────────
+
+  const firstTick = new Date(tlMinDate.getFullYear(), tlMinDate.getMonth() + 1, 1);
+  for (let d = new Date(firstTick); d <= tlMaxDate; d.setMonth(d.getMonth() + 1)) {
+    const tickPct = dateToPct(new Date(d));
+    if (tickPct < -1 || tickPct > 101) continue;
+    const tick = document.createElement('div');
+    tick.className    = 'tl-month-tick';
+    tick.style.left   = tickPct + '%';
+    tick.style.top    = (baselineY - 4) + 'px'; // vertically centered on the 12px tick
+    track.appendChild(tick);
   }
 
-  // ── Axis labels (one per month boundary) ─────────────────────────────────────
+  // ── Today vertical line — shown whenever today is in the current viewport ─────
 
-  const cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  while (cur <= maxDate) {
-    const x = dateToX(cur);
-    if (x >= 0 && x <= trackWidth) {
-      const tick = document.createElement('div');
-      tick.className = 'tl-axis-tick';
-      tick.style.left   = x + 'px';
-      tick.style.top    = (baselineTop - 6) + 'px';
-      tick.style.height = '12px';
-      track.appendChild(tick);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayPct = dateToPct(today);
 
-      const label = document.createElement('div');
-      label.className = 'tl-axis-label';
-      label.style.left = x + 'px';
-      label.style.top  = (baselineTop + 14) + 'px';
-      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      label.textContent = monthNames[cur.getMonth()] + ' ' + cur.getFullYear();
-      track.appendChild(label);
-    }
-    cur.setMonth(cur.getMonth() + 1);
-  }
-
-  // ── Today line ────────────────────────────────────────────────────────────────
-
-  const todayX = dateToX(today);
-  if (todayX >= 0 && todayX <= trackWidth) {
+  if (todayPct >= -2 && todayPct <= 102) {
     const todayLine = document.createElement('div');
-    todayLine.className = 'tl-today-line';
-    todayLine.style.left   = todayX + 'px';
-    todayLine.style.top    = (baselineTop - 52) + 'px';
-    todayLine.style.height = (52 + 160) + 'px'; // extend above and below baseline
+    todayLine.className    = 'tl-today-line';
+    todayLine.style.left   = todayPct + '%';
+    todayLine.style.height = trackH + 'px';
 
     const todayLabel = document.createElement('div');
     todayLabel.className   = 'tl-today-label';
     todayLabel.textContent = 'Today';
+    todayLabel.style.top   = (baselineY + 12) + 'px';
     todayLine.appendChild(todayLabel);
     track.appendChild(todayLine);
   }
 
-  // ── Undated zone ─────────────────────────────────────────────────────────────
+  // ── Place pins using computed collision-free positions ────────────────────────
 
-  if (undatedItems.length > 0) {
-    const sepX = trackWidth + 40;
+  const allAnimPins = [];
 
-    const sepLine = document.createElement('div');
-    sepLine.className  = 'tl-undated-line';
-    sepLine.style.left = sepX + 'px';
-    sepLine.style.top  = (baselineTop - 52) + 'px';
-    sepLine.style.height = (52 + 160) + 'px';
+  placements.forEach(({ item, pct, side, level }) => {
+    if (pct < -30 || pct > 130) return; // skip items outside visible viewport
 
-    const sepLabel = document.createElement('div');
-    sepLabel.className   = 'tl-undated-label';
-    sepLabel.textContent = 'No Due Date';
-    sepLine.appendChild(sepLabel);
-    track.appendChild(sepLine);
-  }
-
-  // ── Place dated items on the timeline ─────────────────────────────────────────
-  // Track used columns per X bucket to avoid vertical overlap
-  const colMap = {}; // key = Math.round(x / 20) → next available top offset
-
-  function reserveSlot(x) {
-    const bucket = Math.round(x / 20);
-    if (!colMap[bucket]) colMap[bucket] = 0;
-    const slot = colMap[bucket];
-    colMap[bucket]++;
-    return slot;
-  }
-
-  const allAnimItems = []; // collect in date order for staggered animation
-
-  datedItems.forEach(item => {
-    const x    = dateToX(item.date);
-    const slot = reserveSlot(x);
-    const isTask    = item.type === 'task';
-    const itemHeight = isTask ? 58 : 42;
-    const gap        = 10;
-    // Tasks sit above baseline, sub-tasks sit below
-    const topPx = isTask
-      ? baselineTop - itemHeight - gap - slot * (itemHeight + gap)
-      : baselineTop + gap + slot * (itemHeight + gap);
-
-    const el = document.createElement('div');
-    el.className = isTask ? 'tl-task' : 'tl-subtask';
-    if (item.obj.completed) el.classList.add('tl-completed');
-    el.style.setProperty('--tl-color', projectColor);
-    el.style.left = x + 'px';
-    el.style.top  = topPx + 'px';
-    el.style.transform = 'translateX(-50%)'; // centre on date
-
-    const nameSpan = document.createElement('div');
-    nameSpan.textContent = item.obj.text || '';
-    el.appendChild(nameSpan);
-
-    if (item.date) {
-      const dateSpan = document.createElement('div');
-      dateSpan.className   = isTask ? 'tl-task-date' : 'tl-subtask-date';
-      dateSpan.textContent = formatDueDate(item.obj.dueDate) || '';
-      el.appendChild(dateSpan);
-    }
-
-    track.appendChild(el);
-    allAnimItems.push({ el, x });
+    const stemH = STEM_BASE + level * LEVEL_STEP;
+    const pin   = buildPin({
+      pct,
+      isAbove:    side === 'above',
+      nameText:   item.obj.text || '',
+      dateText:   formatDueDate(item.obj.dueDate) || null,
+      color:      projectColor,
+      completed:  !!item.obj.completed,
+      baselineY,
+      stemH,
+      isSubtask:  item.type === 'subtask',
+    });
+    track.appendChild(pin);
+    allAnimPins.push({ el: pin, pct });
   });
 
-  // ── Place undated items in the undated zone ───────────────────────────────────
+  // ── Undated items listed below the track ─────────────────────────────────────
 
-  const undatedStartX = trackWidth + 40 + 20;
-  let undatedTop = baselineTop - 58 - 10;
+  if (undatedItems.length > 0 && wrap) wrap.appendChild(buildUndatedSection(undatedItems));
 
+  // ── Staggered fade-in left → right ───────────────────────────────────────────
+
+  allAnimPins.sort((a, b) => a.pct - b.pct);
+  const tlDelays = buildTlDelays(allAnimPins.length);
+  allAnimPins.forEach(({ el }, i) => {
+    el.style.animationName  = el.classList.contains('tl-completed') ? 'tl-pin-in-faded' : 'tl-pin-in';
+    el.style.animationDelay = tlDelays[i] + 'ms';
+  });
+}
+
+// Create one pin element (dot + stem + label) with dynamic vertical sizing.
+// baselineY: pixel distance from track top to the horizontal baseline.
+// stemH: stem pixel height for this pin's level.
+function buildPin({ pct, isAbove, nameText, dateText, color, completed, baselineY, stemH, isSubtask }) {
+  const pin = document.createElement('div');
+  pin.className = 'tl-pin ' + (isAbove ? 'tl-above' : 'tl-below');
+  if (completed)  pin.classList.add('tl-completed');
+  if (isSubtask)  pin.classList.add('tl-subtask');
+  if (color)      pin.style.setProperty('--tl-color', color);
+  pin.style.left = pct + '%';
+  pin.style.top  = baselineY + 'px';
+
+  const dot = document.createElement('div');
+  dot.className = 'tl-pin-dot';
+
+  const stem = document.createElement('div');
+  stem.className    = 'tl-pin-stem';
+  stem.style.height = stemH + 'px';
+  // Inline styles override the CSS defaults and apply the correct level offset
+  if (isAbove) {
+    stem.style.bottom = '8px';
+    stem.style.top    = 'auto';
+  } else {
+    stem.style.top    = '8px';
+    stem.style.bottom = 'auto';
+  }
+
+  const label = document.createElement('div');
+  label.className = 'tl-pin-label';
+  if (isAbove) {
+    label.style.bottom = (stemH + 12) + 'px';
+    label.style.top    = 'auto';
+  } else {
+    label.style.top    = (stemH + 12) + 'px';
+    label.style.bottom = 'auto';
+  }
+
+  const name = document.createElement('div');
+  name.className   = 'tl-pin-name';
+  name.textContent = nameText;
+  label.appendChild(name);
+
+  if (dateText) {
+    const dateEl = document.createElement('div');
+    dateEl.className   = 'tl-pin-date';
+    dateEl.textContent = dateText;
+    label.appendChild(dateEl);
+  }
+
+  // Visual order: above pins render label→stem→dot top-to-bottom; below is reversed
+  if (isAbove) {
+    pin.appendChild(label);
+    pin.appendChild(stem);
+    pin.appendChild(dot);
+  } else {
+    pin.appendChild(dot);
+    pin.appendChild(stem);
+    pin.appendChild(label);
+  }
+
+  return pin;
+}
+
+// Zoom the timeline in or out around the cursor position using the scroll wheel
+function handleTlWheel(e) {
+  const overlay = document.getElementById('modal-timeline');
+  if (!overlay || overlay.style.display === 'none') return;
+  if (tlMinDate === null) return; // no dated tasks loaded yet
+  e.preventDefault();
+
+  const wrap   = e.currentTarget;
+  const rect   = wrap.getBoundingClientRect();
+  const hPad   = 64;
+  // Cursor position as a 0–1 fraction across the inner track width
+  const cursorFrac = Math.max(0, Math.min(1, (e.clientX - rect.left - hPad) / (rect.width - hPad * 2)));
+
+  const factor     = e.deltaY > 0 ? 1.1 : 0.91; // scroll down = zoom out, up = zoom in (half sensitivity)
+  const visible    = tlViewEnd - tlViewStart;
+  const newVisible = Math.min(1, Math.max(0.04, visible * factor)); // max = 1 (can't zoom past data range)
+
+  if (newVisible >= 1) {
+    // At max zoom out: show exactly the data range, no overscroll
+    tlViewStart = 0;
+    tlViewEnd   = 1;
+  } else {
+    // Zoom around the cursor — keep the date under the cursor stationary
+    const center = tlViewStart + cursorFrac * visible;
+    let newStart = center - cursorFrac * newVisible;
+    let newEnd   = center + (1 - cursorFrac) * newVisible;
+
+    // Allow a small overscroll beyond the data edges but not excessive
+    const maxPad = newVisible * 0.6;
+    newStart = Math.max(-maxPad, newStart);
+    newEnd   = Math.min(1 + maxPad, newEnd);
+
+    tlViewStart = newStart;
+    tlViewEnd   = newEnd;
+  }
+  renderTimeline();
+}
+
+// Begin a click-drag pan on the timeline
+function handleTlDragStart(e) {
+  const overlay = document.getElementById('modal-timeline');
+  if (!overlay || overlay.style.display === 'none') return;
+  if (e.button !== 0) return;
+  if (tlMinDate === null) return;
+
+  const wrap = document.querySelector('.timeline-scroll-wrap');
+  if (!wrap || !wrap.contains(e.target)) return;
+
+  e.preventDefault();
+  tlDragState = { x: e.clientX, viewStart: tlViewStart, viewEnd: tlViewEnd };
+  wrap.style.cursor = 'grabbing';
+}
+
+// Pan the timeline as the pointer moves during a drag
+function handleTlDragMove(e) {
+  if (!tlDragState) return;
+  const wrap = document.querySelector('.timeline-scroll-wrap');
+  if (!wrap) return;
+
+  // No panning when fully zoomed out (data range fully visible)
+  if (tlViewEnd - tlViewStart >= 1) return;
+
+  const rect   = wrap.getBoundingClientRect();
+  const trackW = Math.max(1, rect.width - 128);
+  const dxFrac = (e.clientX - tlDragState.x) / trackW;
+  const vis    = tlDragState.viewEnd - tlDragState.viewStart;
+
+  // Moving right shifts the viewport left (dates shift right on screen)
+  tlViewStart = tlDragState.viewStart - dxFrac * vis;
+  tlViewEnd   = tlDragState.viewEnd   - dxFrac * vis;
+  renderTimeline();
+}
+
+// End the drag-to-pan operation
+function handleTlDragEnd() {
+  if (!tlDragState) return;
+  tlDragState = null;
+  const wrap = document.querySelector('.timeline-scroll-wrap');
+  if (wrap) wrap.style.cursor = '';
+}
+
+// Build the "No Due Date" section rendered below the track
+function buildUndatedSection(undatedItems) {
+  const section = document.createElement('div');
+  section.className = 'tl-undated-section';
+
+  const title = document.createElement('div');
+  title.className   = 'tl-undated-title';
+  title.textContent = 'No Due Date';
+  section.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'tl-undated-list';
   undatedItems.forEach(item => {
-    const isTask = item.type === 'task';
-    const el = document.createElement('div');
-    el.className = isTask ? 'tl-task' : 'tl-subtask';
-    if (item.obj.completed) el.classList.add('tl-completed');
-    el.style.setProperty('--tl-color', projectColor);
-    el.style.left = undatedStartX + 'px';
-    el.style.top  = undatedTop + 'px';
-
-    const nameSpan = document.createElement('div');
-    nameSpan.textContent = item.obj.text || '';
-    el.appendChild(nameSpan);
-
-    track.appendChild(el);
-    allAnimItems.push({ el, x: undatedStartX });
-
-    undatedTop -= (isTask ? 58 : 42) + 10;
-    // Wrap downward after several items
-    if (undatedTop < baselineTop - 58 - 10 - 4 * 68) undatedTop = baselineTop + 10;
+    const chip = document.createElement('div');
+    chip.className   = 'tl-undated-chip' + (item.obj.completed ? ' tl-completed' : '');
+    chip.textContent = (item.type === 'subtask' ? '↳ ' : '') + (item.obj.text || '');
+    list.appendChild(chip);
   });
+  section.appendChild(list);
 
-  // ── Apply staggered animation (left to right, slow start → fast finish) ───────
-
-  // Sort all items by x position so animation sweeps left to right
-  allAnimItems.sort((a, b) => a.x - b.x);
-  allAnimItems.forEach(({ el }, i) => {
-    // Completed items use the faded animation so they settle at reduced opacity
-    const animName = el.classList.contains('tl-completed') ? 'tl-pop-in-faded' : 'tl-pop-in';
-    el.style.animationName  = animName;
-    el.style.animationDelay = tlCumulativeDelay(i) + 'ms';
-  });
+  return section;
 }
 
 // ── Task add form ─────────────────────────────────────────────────────────────
@@ -1417,11 +1553,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-undo')?.addEventListener('click', undoLastAction);
   document.getElementById('btn-order-by-date')?.addEventListener('click', orderByDate);
 
-  // Timeline button
+  // Timeline button and close
   document.getElementById('btn-timeline')?.addEventListener('click', openTimeline);
   document.getElementById('btn-close-timeline')?.addEventListener('click', closeTimeline);
   document.getElementById('modal-timeline')
     ?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTimeline(); });
+
+  // Timeline zoom (wheel) and pan (drag) — attached once here, guarded inside handlers
+  const tlWrap = document.querySelector('.timeline-scroll-wrap');
+  if (tlWrap) {
+    tlWrap.addEventListener('wheel', handleTlWheel, { passive: false });
+    tlWrap.addEventListener('mousedown', handleTlDragStart);
+  }
+  document.addEventListener('mousemove', handleTlDragMove);
+  document.addEventListener('mouseup',   handleTlDragEnd);
 
   // Delete project modal
   document.getElementById('btn-delete-project')
