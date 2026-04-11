@@ -75,12 +75,36 @@
             <!-- Add task row -->
             <div class="task-add-row">
               <input class="task-add-input" type="text" id="task-add-input" placeholder="Enter Task" autocomplete="off">
-              <div class="task-add-date">
-                <input class="task-due-input task-due-month" id="add-month" data-field="month" placeholder="Month" maxlength="2">
-                <span class="task-due-sep">/</span>
-                <input class="task-due-input" id="add-day" data-field="day" placeholder="Day" maxlength="2">
-                <span class="task-due-sep">/</span>
-                <input class="task-due-input task-due-year" id="add-year" data-field="year" placeholder="Year" maxlength="4">
+              <div class="task-add-cal-wrap">
+                <button class="btn-cal-trigger" id="btn-cal-trigger" type="button" title="Set due date">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                  </svg>
+                  <span class="cal-date-badge" id="cal-date-badge"></span>
+                </button>
+                <!-- Hidden date storage — read by submitAdd exactly as before -->
+                <input type="hidden" id="add-month">
+                <input type="hidden" id="add-day">
+                <input type="hidden" id="add-year">
+                <!-- Mini calendar popup -->
+                <div class="dcal-popup" id="dcal-popup">
+                  <div class="dcal-header">
+                    <button class="dcal-nav-btn" id="dcal-prev" type="button">&#8249;</button>
+                    <div class="dcal-header-selects">
+                      <select class="dcal-month-sel" id="dcal-month-sel"></select>
+                      <select class="dcal-year-sel" id="dcal-year-sel"></select>
+                    </div>
+                    <button class="dcal-nav-btn" id="dcal-next" type="button">&#8250;</button>
+                  </div>
+                  <div class="dcal-weekdays">
+                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                  </div>
+                  <div class="dcal-days" id="dcal-days"></div>
+                  <div class="dcal-footer">
+                    <button class="dcal-clear-btn" id="dcal-clear-btn" type="button">Clear</button>
+                  </div>
+                </div>
               </div>
               <button class="btn btn-primary" id="btn-add-task">Add</button>
             </div>

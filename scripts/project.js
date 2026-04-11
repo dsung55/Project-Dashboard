@@ -1124,6 +1124,21 @@ let tlMaxDate   = null; // cached latest task date (Date object)
 let tlRange     = 0;    // tlMaxDate - tlMinDate in ms
 let tlDragState = null; // { x, viewStart, viewEnd } while dragging, null otherwise
 
+// Geometry constants shared by renderTimeline and repositionTimeline
+const TL_STEM_BASE  = 40; // minimum stem height in px
+const TL_LEVEL_STEP = 78; // additional px per collision level
+const TL_LABEL_H    = 52; // approximate label height in px
+const TL_EDGE_PAD   = 28; // breathing room above/below the outermost labels
+
+// DOM references cached on initial render — updated by repositionTimeline without rebuilding
+let tlPinEls     = []; // pin elements index-aligned with tlDatedItems
+let tlLabelEls   = []; // label elements, stored in a separate overlay so they always render above stems
+let tlTickEls    = []; // [{ el, date }] for every month-boundary tick
+let tlTodayEl    = null;
+let tlTodayBadge = null; // "Today" chip — separate element so it can be above label boxes
+let tlBaselineEl = null;
+let tlDatedItems = []; // sorted dated items cached for reposition passes
+
 // Open the timeline modal — resets zoom/pan so all tasks are visible
 function openTimeline() {
   const overlay = document.getElementById('modal-timeline');
@@ -1154,7 +1169,7 @@ function buildTlDelays(count) {
 // Assign a { side, level } to each item using a greedy collision-avoidance algorithm.
 // Items too close horizontally at the same side+level get bumped to the next level.
 function computePlacements(datedItems, dateToPct, trackW) {
-  const LABEL_W_PX = 128; // estimated max label pixel width
+  const LABEL_W_PX = 184; // estimated max label pixel width + gap so boxes never touch
   const placed = [];       // { pct, side, level } for already-assigned items
 
   return datedItems.map((item, idx) => {
@@ -1181,11 +1196,21 @@ function computePlacements(datedItems, dateToPct, trackW) {
 }
 
 // Build and render all tasks onto the timeline.
-// Supports zoom (wheel) and pan (drag) via tlViewStart / tlViewEnd state.
+// Called only on initial open — sets up DOM and runs the staggered intro animation.
+// For zoom/pan updates use repositionTimeline() which moves existing elements without rebuilding.
 function renderTimeline() {
   const track = document.getElementById('timeline-track');
   if (!track) return;
   track.innerHTML = '';
+
+  // Reset cached DOM references so repositionTimeline starts clean
+  tlPinEls     = [];
+  tlLabelEls   = [];
+  tlTickEls    = [];
+  tlTodayEl    = null;
+  tlTodayBadge = null;
+  tlBaselineEl = null;
+  tlDatedItems = [];
 
   const wrap = track.closest('.timeline-scroll-wrap');
   wrap?.querySelector('.tl-undated-section')?.remove();
@@ -1245,11 +1270,7 @@ function renderTimeline() {
 
   // ── Compute placements with vertical collision avoidance ──────────────────────
 
-  const STEM_BASE  = 40; // minimum stem height in px
-  const LEVEL_STEP = 78; // additional px per level
-  const LABEL_H    = 52; // approximate label height in px (taller to account for border+padding)
-  const EDGE_PAD   = 28; // breathing room above/below the outermost labels
-
+  tlDatedItems = datedItems; // cache for repositionTimeline
   const placements = computePlacements(datedItems, dateToPct, trackW);
 
   // ── Dynamic track height based on max levels used ────────────────────────────
@@ -1260,8 +1281,8 @@ function renderTimeline() {
     else                    maxBelow = Math.max(maxBelow, p.level);
   });
 
-  const aboveH   = EDGE_PAD + LABEL_H + STEM_BASE + maxAbove * LEVEL_STEP;
-  const belowH   = EDGE_PAD + LABEL_H + STEM_BASE + maxBelow * LEVEL_STEP;
+  const aboveH   = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxAbove * TL_LEVEL_STEP;
+  const belowH   = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxBelow * TL_LEVEL_STEP;
   const trackH   = aboveH + belowH + 4; // +4 for the baseline thickness
   const baselineY = aboveH;
 
@@ -1269,109 +1290,118 @@ function renderTimeline() {
 
   // ── Baseline (thick horizontal center line) ───────────────────────────────────
 
-  const baseline = Object.assign(document.createElement('div'), { className: 'tl-baseline' });
-  baseline.style.top = baselineY + 'px';
-  track.appendChild(baseline);
+  tlBaselineEl = Object.assign(document.createElement('div'), { className: 'tl-baseline' });
+  tlBaselineEl.style.top = baselineY + 'px';
+  track.appendChild(tlBaselineEl);
 
-  // ── Month tick marks — one unlabelled tick per month boundary ────────────────
+  // ── Month tick marks — ALL month boundaries created upfront so repositionTimeline
+  //    can show/hide them as the viewport shifts without rebuilding the DOM ─────────
 
   const firstTick = new Date(tlMinDate.getFullYear(), tlMinDate.getMonth() + 1, 1);
   for (let d = new Date(firstTick); d <= tlMaxDate; d.setMonth(d.getMonth() + 1)) {
-    const tickPct = dateToPct(new Date(d));
-    if (tickPct < -1 || tickPct > 101) continue;
+    const tickDate = new Date(d);
+    const tickPct  = dateToPct(tickDate);
     const tick = document.createElement('div');
-    tick.className    = 'tl-month-tick';
-    tick.style.left   = tickPct + '%';
-    tick.style.top    = (baselineY - 4) + 'px'; // vertically centered on the 12px tick
+    tick.className  = 'tl-month-tick';
+    tick.style.left = tickPct + '%';
+    tick.style.top  = (baselineY - 4) + 'px';
     track.appendChild(tick);
+    tlTickEls.push({ el: tick, date: tickDate });
   }
 
-  // ── Today vertical line — shown whenever today is in the current viewport ─────
+  // ── Today vertical line + badge — created as two separate elements so the badge
+  //    can sit at z-index 5 (above label boxes) while the line stays at z-index 0 ──
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayPct = dateToPct(today);
 
-  if (todayPct >= -2 && todayPct <= 102) {
-    const todayLine = document.createElement('div');
-    todayLine.className    = 'tl-today-line';
-    todayLine.style.left   = todayPct + '%';
-    todayLine.style.height = trackH + 'px';
+  const todayLine = document.createElement('div');
+  todayLine.className    = 'tl-today-line';
+  todayLine.style.left   = todayPct + '%';
+  todayLine.style.height = trackH + 'px';
+  if (todayPct < -2 || todayPct > 102) todayLine.style.display = 'none';
+  track.appendChild(todayLine);
+  tlTodayEl = todayLine;
 
-    const todayLabel = document.createElement('div');
-    todayLabel.className   = 'tl-today-label';
-    todayLabel.textContent = 'Today';
-    todayLabel.style.top   = (baselineY + 12) + 'px';
-    todayLine.appendChild(todayLabel);
-    track.appendChild(todayLine);
-  }
+  // Badge is a sibling of the line (not a child) so it has its own z-index
+  const todayBadge = document.createElement('div');
+  todayBadge.className   = 'tl-today-badge';
+  todayBadge.textContent = 'Today';
+  todayBadge.style.left  = todayPct + '%';
+  if (todayPct < -2 || todayPct > 102) todayBadge.style.display = 'none';
+  track.appendChild(todayBadge);
+  tlTodayBadge = todayBadge;
 
   // ── Place pins using computed collision-free positions ────────────────────────
 
-  const allAnimPins  = [];
-  const taskPcts     = {};  // taskId -> pct for dated parent tasks
-  const subGroupPcts = {};  // parentTaskId -> [pct, ...] for visible dated subtasks
+  // ── Per-task accent colors — subtasks inherit their parent task's color ──────
+  // Palette cycles through distinct hues so sibling tasks are visually distinct.
+  const TASK_PALETTE = [
+    '#4A90D9', '#E8734A', '#5BAD6F', '#9B6DD4',
+    '#D4A843', '#4ABCB8', '#D45E8A', '#7A9E4A',
+  ];
+  const taskColorMap = {}; // taskId -> color
+  tasks.forEach((task, i) => {
+    taskColorMap[task.id] = TASK_PALETTE[i % TASK_PALETTE.length];
+  });
 
+  const allAnimPins = [];
+
+  // All pins are added to the DOM upfront — off-screen ones are hidden so
+  // repositionTimeline() can reveal them on zoom/pan without a DOM rebuild.
   placements.forEach(({ item, pct, side, level }) => {
-    if (pct < -30 || pct > 130) return; // skip items outside visible viewport
+    // Parent tasks use their assigned palette color; subtasks match their parent
+    const pinColor = item.type === 'subtask'
+      ? (taskColorMap[item.parentId] || projectColor)
+      : (taskColorMap[item.taskId]   || projectColor);
 
-    // Collect positions for connector lines
-    if (item.type === 'task' && item.taskId) {
-      taskPcts[item.taskId] = pct;
-    } else if (item.type === 'subtask' && item.parentId) {
-      if (!subGroupPcts[item.parentId]) subGroupPcts[item.parentId] = [];
-      subGroupPcts[item.parentId].push(pct);
-    }
-
-    const stemH = STEM_BASE + level * LEVEL_STEP;
+    const stemH = TL_STEM_BASE + level * TL_LEVEL_STEP;
     const pin   = buildPin({
       pct,
       isAbove:    side === 'above',
       nameText:   item.obj.text || '',
       dateText:   formatDueDate(item.obj.dueDate) || null,
-      color:      projectColor,
+      color:      pinColor,
       completed:  !!item.obj.completed,
       baselineY,
       stemH,
       isSubtask:  item.type === 'subtask',
     });
+
+    const isVisible = pct >= -30 && pct <= 130;
+    if (!isVisible) pin.style.display = 'none'; // hidden until panned/zoomed into view
+
     track.appendChild(pin);
-    allAnimPins.push({ el: pin, pct });
+    tlPinEls.push(pin); // store reference for incremental updates
+    if (isVisible) allAnimPins.push({ el: pin, pct });
   });
 
-  // ── Dotted connector lines linking each parent task to its dated sub-tasks ────
+  // ── Move labels into a shared overlay so they always paint above all stems ────
+  // Each label is repositioned from pin-relative coords to track-absolute coords.
+  // This eliminates cross-pin z-index fights caused by each pin's animation stacking context.
 
-  // Only draw when there are subtask groups to connect
-  if (Object.keys(subGroupPcts).length > 0) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', String(trackH));
-    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible';
+  const labelOverlay = document.createElement('div');
+  labelOverlay.className = 'tl-label-overlay';
+  track.appendChild(labelOverlay);
 
-    Object.entries(subGroupPcts).forEach(([parentId, subPcts]) => {
-      // Include the parent task dot in the span if it's visible on screen
-      const parentPct = taskPcts[parentId];
-      const allPcts   = parentPct != null ? [parentPct, ...subPcts] : subPcts;
-      if (allPcts.length < 2) return; // nothing to connect
+  placements.forEach(({ pct, side, level }, i) => {
+    const pin   = tlPinEls[i];
+    const label = pin?.querySelector('.tl-pin-label');
+    if (!label) { tlLabelEls.push(null); return; }
 
-      const minPct = Math.min(...allPcts);
-      const maxPct = Math.max(...allPcts);
+    const stemH   = TL_STEM_BASE + level * TL_LEVEL_STEP;
+    const isAbove = side === 'above';
 
-      // Horizontal dotted line at baseline level spanning the whole group
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', minPct + '%');
-      line.setAttribute('y1', String(baselineY + 2)); // center on the 5px baseline
-      line.setAttribute('x2', maxPct + '%');
-      line.setAttribute('y2', String(baselineY + 2));
-      line.style.stroke          = 'var(--text-primary)';
-      line.style.strokeWidth     = '1.5';
-      line.style.strokeDasharray = '5 4';
-      line.style.opacity         = '0.45';
-      svg.appendChild(line);
-    });
+    // Rewrite position from pin-relative to track-absolute using bottom (above) or top (below)
+    label.style.left   = pct + '%';
+    label.style.bottom = isAbove ? (trackH - baselineY + stemH + 12) + 'px' : 'auto';
+    label.style.top    = isAbove ? 'auto' : (baselineY + stemH + 12) + 'px';
 
-    // Insert before all other children so it renders behind pins and baseline
-    track.insertBefore(svg, track.firstChild);
-  }
+    if (pin.style.display === 'none') label.style.display = 'none';
+
+    labelOverlay.appendChild(label);
+    tlLabelEls.push(label);
+  });
 
   // ── Undated items listed below the track ─────────────────────────────────────
 
@@ -1382,8 +1412,117 @@ function renderTimeline() {
   allAnimPins.sort((a, b) => a.pct - b.pct);
   const tlDelays = buildTlDelays(allAnimPins.length);
   allAnimPins.forEach(({ el }, i) => {
-    el.style.animationName  = el.classList.contains('tl-completed') ? 'tl-pin-in-faded' : 'tl-pin-in';
+    const isFaded = el.classList.contains('tl-completed');
+    el.style.animationName  = isFaded ? 'tl-pin-in-faded' : 'tl-pin-in';
     el.style.animationDelay = tlDelays[i] + 'ms';
+    // Also animate the label (now in overlay, not inside pin, so needs its own animation)
+    const label = tlLabelEls[tlPinEls.indexOf(el)];
+    if (label) {
+      label.style.animationName           = isFaded ? 'tl-label-in-faded' : 'tl-label-in';
+      label.style.animationDelay          = tlDelays[i] + 'ms';
+      label.style.animationDuration       = '280ms';
+      label.style.animationFillMode       = 'forwards';
+      label.style.animationTimingFunction = 'ease-out';
+    }
+  });
+}
+
+// Update all pin/tick/today positions after a zoom or pan without rebuilding the DOM.
+// This avoids re-triggering the intro animation and keeps interaction smooth.
+function repositionTimeline() {
+  const track = document.getElementById('timeline-track');
+  if (!track || tlPinEls.length === 0) return; // fall back to nothing if not yet built
+
+  const wrap   = track.closest('.timeline-scroll-wrap');
+  const hPad   = 64;
+  const trackW = Math.max(400, (wrap?.clientWidth || 900) - hPad * 2);
+
+  // Recompute dateToPct with current viewport state
+  function dateToPct(date) {
+    if (tlRange === 0) return 50;
+    const frac = (date - tlMinDate) / tlRange;
+    return ((frac - tlViewStart) / (tlViewEnd - tlViewStart)) * 100;
+  }
+
+  // Re-run collision avoidance — positions change relative to each other when zooming
+  const placements = computePlacements(tlDatedItems, dateToPct, trackW);
+
+  // Recalculate track height based on new level usage
+  let maxAbove = 0, maxBelow = 0;
+  placements.forEach(p => {
+    if (p.side === 'above') maxAbove = Math.max(maxAbove, p.level);
+    else                    maxBelow = Math.max(maxBelow, p.level);
+  });
+  const aboveH    = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxAbove * TL_LEVEL_STEP;
+  const belowH    = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxBelow * TL_LEVEL_STEP;
+  const trackH    = aboveH + belowH + 4;
+  const baselineY = aboveH;
+
+  track.style.height = trackH + 'px';
+  if (tlBaselineEl) tlBaselineEl.style.top = baselineY + 'px';
+
+  // Update month tick positions — show/hide based on current viewport
+  tlTickEls.forEach(({ el, date }) => {
+    const pct = dateToPct(date);
+    if (pct < -1 || pct > 101) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+      el.style.left    = pct + '%';
+      el.style.top     = (baselineY - 4) + 'px';
+    }
+  });
+
+  // Update today line + badge positions
+  if (tlTodayEl || tlTodayBadge) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const pct = dateToPct(today);
+    const hide = pct < -2 || pct > 102;
+    if (tlTodayEl) {
+      tlTodayEl.style.display = hide ? 'none' : '';
+      if (!hide) { tlTodayEl.style.left = pct + '%'; tlTodayEl.style.height = trackH + 'px'; }
+    }
+    if (tlTodayBadge) {
+      tlTodayBadge.style.display = hide ? 'none' : '';
+      if (!hide) tlTodayBadge.style.left = pct + '%';
+    }
+  }
+
+  // Update each pin's position, side, and stem height — no animation
+  placements.forEach(({ pct, side, level }, i) => {
+    const pin   = tlPinEls[i];
+    const label = tlLabelEls[i]; // labels live in overlay, not inside the pin
+    if (!pin) return;
+
+    const isVisible = pct >= -30 && pct <= 130;
+    if (!isVisible) {
+      pin.style.display = 'none';
+      if (label) label.style.display = 'none';
+      return;
+    }
+
+    pin.style.display = '';
+    pin.style.left    = pct + '%';
+    pin.style.top     = baselineY + 'px';
+
+    const isAbove = side === 'above';
+    pin.classList.toggle('tl-above', isAbove);
+    pin.classList.toggle('tl-below', !isAbove);
+
+    const stemH = TL_STEM_BASE + level * TL_LEVEL_STEP;
+    const stem  = pin.querySelector('.tl-pin-stem');
+
+    if (stem) {
+      stem.style.height = stemH + 'px';
+      stem.style.bottom = isAbove ? '8px' : 'auto';
+      stem.style.top    = isAbove ? 'auto' : '8px';
+    }
+    if (label) {
+      label.style.display = '';
+      label.style.left    = pct + '%';
+      label.style.bottom  = isAbove ? (trackH - baselineY + stemH + 12) + 'px' : 'auto';
+      label.style.top     = isAbove ? 'auto' : (baselineY + stemH + 12) + 'px';
+    }
   });
 }
 
@@ -1463,7 +1602,7 @@ function handleTlWheel(e) {
   // Cursor position as a 0–1 fraction across the inner track width
   const cursorFrac = Math.max(0, Math.min(1, (e.clientX - rect.left - hPad) / (rect.width - hPad * 2)));
 
-  const factor     = e.deltaY > 0 ? 1.1 : 0.91; // scroll down = zoom out, up = zoom in (half sensitivity)
+  const factor     = e.deltaY > 0 ? 1.04 : 0.962; // scroll down = zoom out, up = zoom in (low sensitivity)
   const visible    = tlViewEnd - tlViewStart;
   const newVisible = Math.min(1, Math.max(0.04, visible * factor)); // max = 1 (can't zoom past data range)
 
@@ -1477,15 +1616,14 @@ function handleTlWheel(e) {
     let newStart = center - cursorFrac * newVisible;
     let newEnd   = center + (1 - cursorFrac) * newVisible;
 
-    // Allow a small overscroll beyond the data edges but not excessive
-    const maxPad = newVisible * 0.6;
-    newStart = Math.max(-maxPad, newStart);
-    newEnd   = Math.min(1 + maxPad, newEnd);
+    // Hard-clamp to the data edges — don't allow panning past earliest/latest task
+    newStart = Math.max(0, newStart);
+    newEnd   = Math.min(1, newEnd);
 
     tlViewStart = newStart;
     tlViewEnd   = newEnd;
   }
-  renderTimeline();
+  repositionTimeline();
 }
 
 // Begin a click-drag pan on the timeline
@@ -1518,9 +1656,16 @@ function handleTlDragMove(e) {
   const vis    = tlDragState.viewEnd - tlDragState.viewStart;
 
   // Moving right shifts the viewport left (dates shift right on screen)
-  tlViewStart = tlDragState.viewStart - dxFrac * vis;
-  tlViewEnd   = tlDragState.viewEnd   - dxFrac * vis;
-  renderTimeline();
+  let newStart = tlDragState.viewStart - dxFrac * vis;
+  let newEnd   = tlDragState.viewEnd   - dxFrac * vis;
+
+  // Clamp to data edges — don't pan past the earliest or latest task
+  if (newStart < 0) { newEnd -= newStart; newStart = 0; }
+  if (newEnd   > 1) { newStart -= (newEnd - 1); newEnd = 1; }
+
+  tlViewStart = newStart;
+  tlViewEnd   = newEnd;
+  repositionTimeline();
 }
 
 // End the drag-to-pan operation
@@ -1554,6 +1699,167 @@ function buildUndatedSection(undatedItems) {
   return section;
 }
 
+// ── Mini date-picker calendar (add-task row) ──────────────────────────────────
+
+function initTaskCalendar() {
+  const trigger  = document.getElementById('btn-cal-trigger');
+  const popup    = document.getElementById('dcal-popup');
+  const daysEl   = document.getElementById('dcal-days');
+  const monthSel = document.getElementById('dcal-month-sel');
+  const yearSel  = document.getElementById('dcal-year-sel');
+  const prevBtn  = document.getElementById('dcal-prev');
+  const nextBtn  = document.getElementById('dcal-next');
+  const clearBtn = document.getElementById('dcal-clear-btn');
+  const badge    = document.getElementById('cal-date-badge');
+
+  if (!trigger || !popup) return;
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+
+  const today  = new Date();
+  let curYear  = today.getFullYear();
+  let curMonth = today.getMonth(); // 0-based
+  let selYear  = null;
+  let selMonth = null; // 0-based
+  let selDay   = null;
+
+  // Populate month dropdown
+  MONTHS.forEach((name, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = name;
+    monthSel.appendChild(opt);
+  });
+
+  // Populate year dropdown (last year through 6 years out)
+  for (let y = today.getFullYear() - 1; y <= today.getFullYear() + 6; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+
+  // Sync select elements to current viewed month/year
+  function syncSelects() {
+    monthSel.value = curMonth;
+    yearSel.value  = curYear;
+  }
+
+  // Rebuild the day-grid for the currently viewed month
+  function renderDays() {
+    syncSelects();
+    daysEl.innerHTML = '';
+
+    const firstWeekday = new Date(curYear, curMonth, 1).getDay(); // 0=Sun
+    const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
+
+    // Empty offset cells before the first day of the month
+    for (let i = 0; i < firstWeekday; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'dcal-day empty';
+      cell.type = 'button';
+      daysEl.appendChild(cell);
+    }
+
+    // One button per calendar day
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('button');
+      cell.className = 'dcal-day';
+      cell.type = 'button';
+      cell.textContent = d;
+
+      const isToday = d === today.getDate() &&
+                      curMonth === today.getMonth() &&
+                      curYear  === today.getFullYear();
+      if (isToday) cell.classList.add('today');
+
+      const isSel = selDay === d && selMonth === curMonth && selYear === curYear;
+      if (isSel) cell.classList.add('selected');
+
+      cell.addEventListener('click', () => {
+        selDay   = d;
+        selMonth = curMonth;
+        selYear  = curYear;
+        syncHiddenInputs();
+        updateBadge();
+        closePopup();
+      });
+
+      daysEl.appendChild(cell);
+    }
+  }
+
+  // Write the selected date into the hidden inputs that submitAdd reads
+  function syncHiddenInputs() {
+    const mEl = document.getElementById('add-month');
+    const dEl = document.getElementById('add-day');
+    const yEl = document.getElementById('add-year');
+    if (mEl) mEl.value = selDay !== null ? String(selMonth + 1) : '';
+    if (dEl) dEl.value = selDay !== null ? String(selDay)       : '';
+    if (yEl) yEl.value = selDay !== null ? String(selYear)      : '';
+  }
+
+  // Show or clear the date badge on the trigger button
+  function updateBadge() {
+    if (selDay !== null) {
+      badge.textContent = MONTHS[selMonth].slice(0, 3) + ' ' + selDay;
+      trigger.classList.add('has-date');
+    } else {
+      badge.textContent = '';
+      trigger.classList.remove('has-date');
+    }
+  }
+
+  function openPopup()  { popup.classList.add('open');    renderDays(); }
+  function closePopup() { popup.classList.remove('open'); }
+
+  // Toggle popup on trigger click
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    popup.classList.contains('open') ? closePopup() : openPopup();
+  });
+
+  // Previous month
+  prevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (--curMonth < 0) { curMonth = 11; curYear--; }
+    renderDays();
+  });
+
+  // Next month
+  nextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (++curMonth > 11) { curMonth = 0; curYear++; }
+    renderDays();
+  });
+
+  monthSel.addEventListener('change', (e) => { curMonth = parseInt(e.target.value); renderDays(); });
+  yearSel.addEventListener('change',  (e) => { curYear  = parseInt(e.target.value); renderDays(); });
+
+  // Clear selection
+  clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    selDay = selMonth = selYear = null;
+    syncHiddenInputs();
+    updateBadge();
+    closePopup();
+  });
+
+  // Close when clicking anywhere outside the picker
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('btn-cal-trigger')?.closest('.task-add-cal-wrap');
+    if (wrap && !wrap.contains(e.target)) closePopup();
+  });
+
+  // Expose reset so submitAdd can clear the picker after adding a task
+  window._resetTaskCalendar = () => {
+    selDay = selMonth = selYear = null;
+    syncHiddenInputs();
+    updateBadge();
+  };
+}
+
 // ── Task add form ─────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1579,20 +1885,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const dueDate = (month || day || year) ? { month, day, year } : null;
     addTask(text, dueDate);
     if (input) input.value = '';
-    ['add-month', 'add-day', 'add-year'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
+    // Reset the calendar picker (clears hidden inputs + resets badge)
+    window._resetTaskCalendar?.();
   };
 
   addBtn?.addEventListener('click', submitAdd);
   input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAdd(); });
 
-  // Wire numeric-only validation on the add-task date inputs
-  ['add-month', 'add-day', 'add-year'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) wireDateInput(el);
-  });
+  // Initialise the mini calendar date picker on the add-task row
+  initTaskCalendar();
 
   // Undo and Order by Date buttons
   document.getElementById('btn-undo')?.addEventListener('click', undoLastAction);

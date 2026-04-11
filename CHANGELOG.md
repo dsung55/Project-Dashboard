@@ -3,6 +3,13 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.2 — Calendar Picker, Timeline Spacing & UI Modernization
+
+- **Calendar date picker:** The three MM/DD/YYYY inputs in the add-task row are replaced with a calendar icon button. Clicking it opens a mini inline calendar with month/year dropdowns and a grid of days. Selecting a day sets the due date and closes the picker. A "Clear" link resets it. (Existing task date editing is unchanged.)
+- **Timeline label spacing:** Increased the minimum horizontal gap between pin label boxes so they no longer crowd each other at zoomed-out zoom levels
+- **Cleaner section backgrounds:** Project phase sections and the page header now use a plain white background instead of the previous grey fill, giving the layout a lighter, more modern feel
+- **Card shadows:** Project cards now have a subtle resting shadow that grows noticeably on hover, replacing the flat border-only look and adding visual depth
+
 ## v1.5.1 — Timeline Polish & Version Field Removal
 
 - **Version field removed:** Version numbers no longer appear on project cards or the project detail page — add it to the project title if needed

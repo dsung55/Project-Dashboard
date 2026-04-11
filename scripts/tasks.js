@@ -48,12 +48,14 @@ function renderList(animate) {
   const active    = tasks.filter(t => !t.completed);
   const completed = tasks.filter(t =>  t.completed);
 
+  // Precompute all delays in one O(n) pass instead of O(n²) per-item calls
+  const delays = animate ? buildCumulativeDelays(active.length + completed.length) : null;
+
   active.forEach((task, index) => {
     const item = buildItem(task);
     if (animate) {
-      const offsetMs = calculateCumulativeDelay(index);
       item.style.animationName  = 'task-pop-in';
-      item.style.animationDelay = offsetMs + 'ms';
+      item.style.animationDelay = delays[index] + 'ms';
     }
     list.appendChild(item);
   });
@@ -68,9 +70,8 @@ function renderList(animate) {
   completed.forEach((task, index) => {
     const item = buildItem(task);
     if (animate) {
-      const offsetMs = calculateCumulativeDelay(active.length + index);
       item.style.animationName  = 'task-pop-in';
-      item.style.animationDelay = offsetMs + 'ms';
+      item.style.animationDelay = delays[active.length + index] + 'ms';
     }
     list.appendChild(item);
   });
@@ -78,15 +79,16 @@ function renderList(animate) {
   initDragAndDrop();
 }
 
-// Compute the start time for item at a given index by summing up prior item delays
-// Starts slow (120ms first slot) and accelerates rapidly — minimum slot 10ms
-function calculateCumulativeDelay(index) {
+// Build an array of cumulative animation delays for `count` items in a single O(n) pass
+// Returns delays[i] = ms before item i should appear; avoids the O(n²) cost of per-item loops
+function buildCumulativeDelays(count) {
+  const delays = new Array(count);
   let total = 0;
-  for (let i = 0; i < index; i++) {
-    // Each slot shrinks by 62% — steep curve so later items blur together
-    total += Math.max(10, Math.round(120 * Math.pow(0.62, i)));
+  for (let i = 0; i < count; i++) {
+    delays[i] = total;
+    total += Math.max(10, Math.round(120 * Math.pow(0.82, i)));
   }
-  return total;
+  return delays;
 }
 
 // Build and return a single task <li> element
@@ -245,7 +247,7 @@ function handleDrop(e) {
 // ── Drag helpers ──────────────────────────────────────────────────────────────
 
 function clearDragIndicators() {
-  document.querySelectorAll('.task-item.drop-above, .task-item.drop-below')
+  document.querySelectorAll('.gt-item.drop-above, .gt-item.drop-below')
     .forEach(el => el.classList.remove('drop-above', 'drop-below'));
 }
 

@@ -36,6 +36,15 @@
   flex: 1;
 }
 
+/* Delete Project button — no fill, red text */
+#btn-delete-project {
+  background: transparent;
+  color:      var(--red);
+  border:     1px solid var(--border-color);
+}
+
+#btn-delete-project:hover { background: transparent; opacity: 0.7; }
+
 .project-name {
   font-size:      30px;
   font-weight:    700;
@@ -753,17 +762,218 @@
   user-select: none;
 }
 
-/* Date input group in the add-task row */
-.task-add-date {
-  display:     flex;
-  align-items: center;
-  gap:         2px;
+/* Ensure task text input shrinks to make room for the calendar button */
+.task-add-input {
+  min-width: 0;
+}
+
+/* ── Add-task calendar date picker ──────────────────────────────────────────── */
+
+/* Wrapper — provides positioning context for the popup */
+.task-add-cal-wrap {
+  position:    relative;
   flex-shrink: 0;
 }
 
-/* Ensure task text input shrinks to make room for date inputs */
-.task-add-input {
-  min-width: 0;
+/* Calendar icon trigger button */
+.btn-cal-trigger {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           6px;
+  padding:       7px 11px;
+  border:        1px solid var(--border-color);
+  border-radius: 8px;
+  background:    var(--bg-primary);
+  color:         var(--text-secondary);
+  cursor:        pointer;
+  font-family:   var(--font);
+  font-size:     13px;
+  white-space:   nowrap;
+  height:        100%;
+  transition:    border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.btn-cal-trigger:hover {
+  border-color: var(--blue);
+  color:        var(--blue);
+}
+
+/* Active state — a date has been picked */
+.btn-cal-trigger.has-date {
+  border-color: var(--blue);
+  color:        var(--blue);
+  background:   rgba(0,122,255,0.06);
+}
+
+/* Badge text showing the selected date (e.g. "Apr 15") */
+.cal-date-badge {
+  font-size:   12px;
+  font-weight: 500;
+}
+
+/* ── Floating calendar popup ─────────────────────────────────────────────────── */
+
+.dcal-popup {
+  display:        none;
+  position:       absolute;
+  top:            calc(100% + 8px);
+  right:          0;
+  width:          252px;
+  background:     var(--bg-primary);
+  border:         1px solid var(--border-color);
+  border-radius:  12px;
+  box-shadow:     0 8px 32px rgba(0,0,0,0.16);
+  z-index:        600;
+  overflow:       hidden;
+  padding-bottom: 8px;
+}
+
+.dcal-popup.open { display: block; }
+
+/* Header row: ‹ Month▾ Year▾ › */
+.dcal-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         10px 10px 8px;
+  border-bottom:   1px solid var(--border-color);
+}
+
+.dcal-nav-btn {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  font-size:     20px;
+  line-height:   1;
+  color:         var(--text-secondary);
+  padding:       2px 4px;
+  border-radius: 5px;
+  transition:    background var(--transition), color var(--transition);
+}
+
+.dcal-nav-btn:hover {
+  background: var(--bg-secondary);
+  color:      var(--text-primary);
+}
+
+.dcal-header-selects {
+  display:     flex;
+  gap:         4px;
+  align-items: center;
+}
+
+.dcal-month-sel,
+.dcal-year-sel {
+  border:        1px solid var(--border-color);
+  border-radius: 6px;
+  background:    var(--bg-primary);
+  color:         var(--text-primary);
+  font-family:   var(--font);
+  font-size:     13px;
+  font-weight:   600;
+  padding:       3px 6px;
+  cursor:        pointer;
+  outline:       none;
+  transition:    border-color var(--transition);
+}
+
+.dcal-month-sel:focus,
+.dcal-year-sel:focus {
+  border-color: var(--blue);
+}
+
+/* Day-of-week label row: Su Mo Tu We Th Fr Sa */
+.dcal-weekdays {
+  display:               grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding:               8px 8px 4px;
+  gap:                   2px;
+}
+
+.dcal-weekdays span {
+  text-align:     center;
+  font-size:      10px;
+  font-weight:    600;
+  color:          var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* 7-column grid of day buttons */
+.dcal-days {
+  display:               grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding:               0 8px;
+  gap:                   2px;
+}
+
+.dcal-day {
+  aspect-ratio:    1;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  border-radius:   6px;
+  font-size:       13px;
+  cursor:          pointer;
+  border:          none;
+  background:      transparent;
+  color:           var(--text-primary);
+  font-family:     var(--font);
+  transition:      background var(--transition), color var(--transition);
+}
+
+.dcal-day:hover:not(.empty)  { background: var(--bg-secondary); }
+
+/* Today's date — bold blue number */
+.dcal-day.today {
+  font-weight: 700;
+  color:       var(--blue);
+}
+
+/* Selected date — filled blue */
+.dcal-day.selected {
+  background:  var(--blue);
+  color:       #FFFFFF;
+  font-weight: 600;
+}
+
+.dcal-day.selected.today { color: #FFFFFF; }
+
+/* Empty offset cells at start of month — not interactive */
+.dcal-day.empty {
+  cursor:         default;
+  pointer-events: none;
+}
+
+/* Footer: Clear link */
+.dcal-footer {
+  display:         flex;
+  justify-content: center;
+  padding:         6px 8px 2px;
+  border-top:      1px solid var(--border-color);
+  margin-top:      6px;
+}
+
+.dcal-clear-btn {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  font-family:   var(--font);
+  font-size:     12px;
+  color:         var(--text-secondary);
+  padding:       3px 10px;
+  border-radius: 5px;
+  transition:    background var(--transition), color var(--transition);
+}
+
+.dcal-clear-btn:hover {
+  background: var(--bg-secondary);
+  color:      var(--red);
+}
+
+/* Dark mode: deeper shadow */
+[data-theme="dark"] .dcal-popup {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
 }
 
 /* Inline edit input replacing the task text span on double-click */
@@ -864,12 +1074,12 @@
 }
 
 /* Each pin is a zero-size anchor placed on the baseline (top set by JS).
-   All visual children (dot, stem, label) are absolutely positioned from it. */
+   Contains the dot and stem only — labels are extracted into .tl-label-overlay so
+   they always render above all pin stems regardless of stacking context order. */
 .tl-pin {
   position:                  absolute;
   width:                     0;
   height:                    0;
-  z-index:                   3;
   opacity:                   0;
   animation-duration:        280ms;
   animation-fill-mode:       forwards;
@@ -885,7 +1095,7 @@
   background:    var(--tl-color, #1D1D1F);
   top:           -8px;
   left:          -8px;
-  z-index:       2;
+  z-index:       3;
   box-shadow:    0 0 0 3px var(--bg-primary); /* small halo so dot reads over baseline */
 }
 
@@ -908,7 +1118,8 @@
   font-size: 9px;
 }
 
-/* Vertical stem — height and direction (top/bottom) are set inline by JS */
+/* Vertical stem — height and direction (top/bottom) are set inline by JS.
+   Stems are inside .tl-pin elements which sit below the .tl-label-overlay (z-index 4). */
 .tl-pin-stem {
   position:   absolute;
   width:      2px;
@@ -920,7 +1131,8 @@
 .tl-pin.tl-above .tl-pin-stem { bottom: 8px; }
 .tl-pin.tl-below .tl-pin-stem { top:    8px; }
 
-/* Label — position (top/bottom offset) is set inline by JS */
+/* Label — position (top/bottom offset) is set inline by JS.
+   z-index is NOT set here — the .tl-label-overlay container provides the layer. */
 .tl-pin-label {
   position:      absolute;
   left:          50%;
@@ -965,27 +1177,29 @@
   background:      var(--blue);
   transform:       translateX(-50%);
   opacity:         0.45;
-  z-index:         1;
+  z-index:         0;
   pointer-events:  none;
   border-radius:   1px;
 }
 
-/* "Today" label floated near the baseline */
-.tl-today-label {
+/* "Today" badge — separate track-level element so it sits above label boxes (z-index 5).
+   Positioned at the very top of the blue line so it caps the line's top endpoint. */
+.tl-today-badge {
   position:       absolute;
-  left:           50%;
+  top:            0;
   transform:      translateX(-50%);
-  font-size:      10px;
+  font-size:      12px;
   font-weight:    700;
   color:          var(--blue);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   white-space:    nowrap;
   background:     var(--bg-primary);
-  padding:        2px 6px;
-  border-radius:  4px;
-  border:         1px solid var(--blue);
-  opacity:        0.9;
+  padding:        3px 9px;
+  border-radius:  5px;
+  border:         1.5px solid var(--blue);
+  z-index:        5;
+  pointer-events: none;
 }
 
 /* Empty state when no tasks have due dates */
@@ -1046,6 +1260,20 @@
   margin-left: 12px;
 }
 
+/* Overlay container — all pin labels live here so they always render above stems */
+.tl-label-overlay {
+  position:       absolute;
+  inset:          0;
+  pointer-events: none;
+  z-index:        4;
+}
+
+/* Labels in the overlay need pointer events re-enabled */
+.tl-label-overlay .tl-pin-label {
+  pointer-events: auto;
+  opacity:        0; /* starts hidden; animation sets final opacity */
+}
+
 /* Fade-in animations for pins */
 @keyframes tl-pin-in {
   from { opacity: 0; }
@@ -1057,6 +1285,17 @@
   to   { opacity: 0.38; }
 }
 
+/* Fade-in animations for labels (inside overlay — no transform, just opacity) */
+@keyframes tl-label-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes tl-label-in-faded {
+  from { opacity: 0;    }
+  to   { opacity: 0.38; }
+}
+
 /* Dark mode */
 [data-theme="dark"] .timeline-modal    { background: #1C1C1E; }
-[data-theme="dark"] .tl-today-label   { background: #1C1C1E; }
+[data-theme="dark"] .tl-today-badge   { background: #1C1C1E; }

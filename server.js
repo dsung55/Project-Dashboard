@@ -43,7 +43,7 @@ function computeStatus(project) {
   const done = tasks.filter(t => t.completed).length;
   if (done > 0) return 'ongoing';
   // Phases that signal active work — treat as in-progress even with no completed tasks
-  if (phase === 'in progress' || phase === 'testing') return 'ongoing';
+  if (phase === 'in progress') return 'ongoing';
   return 'not-started';
 }
 
@@ -227,7 +227,7 @@ app.get('/api/projects/:id/files/:filename', (req, res) => {
 
 // GET /api/config — return global config
 app.get('/api/config', (_req, res) => {
-  const config = readJSON(CONFIG_FILE, { phases: ['Planning', 'Planned', 'In Progress', 'Testing', 'Completed'] });
+  const config = readJSON(CONFIG_FILE, { phases: ['Planning', 'Planned', 'In Progress', 'Completed'] });
   res.json(config);
 });
 
@@ -352,7 +352,7 @@ function bootstrap() {
   // Create default config.json if missing
   if (!fs.existsSync(CONFIG_FILE)) {
     writeJSON(CONFIG_FILE, {
-      phases: ['Planning', 'Planned', 'In Progress', 'Testing', 'Completed'],
+      phases: ['Planning', 'Planned', 'In Progress', 'Completed'],
       theme: 'system'
     });
     console.log('Created default data/config.json');

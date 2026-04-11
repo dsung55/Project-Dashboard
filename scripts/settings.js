@@ -50,11 +50,32 @@ function renderPhaseList() {
       savePhases();
     });
 
-    // Delete this phase
-    item.querySelector('.btn-phase-delete').addEventListener('click', () => {
+    // Delete this phase — migrate any projects in it to the previous phase first
+    item.querySelector('.btn-phase-delete').addEventListener('click', async () => {
+      if (phases.length <= 1) {
+        showToast('Cannot delete the only remaining phase', true);
+        return;
+      }
+      const deletedPhase  = phases[index];
+      const fallbackPhase = index > 0 ? phases[index - 1] : phases[index + 1];
       phases.splice(index, 1);
       renderPhaseList();
-      savePhases();
+      await savePhases();
+
+      // Move any projects that were in the deleted phase to the fallback phase
+      try {
+        const projects = await api.getProjects();
+        const affected  = projects.filter(p => p.phase === deletedPhase);
+        if (affected.length > 0) {
+          await Promise.all(affected.map(async p => {
+            const full = await api.getProject(p.id);
+            await api.saveProject(p.id, { ...full, phase: fallbackPhase });
+          }));
+          showToast(`Moved ${affected.length} project${affected.length !== 1 ? 's' : ''} to "${fallbackPhase}"`);
+        }
+      } catch (err) {
+        showToast('Could not migrate some projects: ' + err.message, true);
+      }
     });
 
     list.appendChild(item);

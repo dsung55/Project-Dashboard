@@ -316,6 +316,29 @@ async function handleSectionDrop(e, section, phase) {
 
 // ── Drag operations ───────────────────────────────────────────────────────────
 
+// FLIP-animate a set of cards from their pre-recorded positions to their current layout positions.
+// Call this after a DOM mutation; beforeRects must have been captured before the mutation.
+function animateSiblingFlip(siblings, beforeRects) {
+  siblings.forEach(card => {
+    const before = beforeRects.get(card);
+    const after  = card.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top  - after.top;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return; // didn't move
+
+    // Snap back to old position, then spring to the new one
+    card.style.transition = 'none';
+    card.style.transform  = `translate(${dx}px, ${dy}px)`;
+    void card.offsetWidth; // force reflow
+    card.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
+    card.style.transform  = '';
+    card.addEventListener('transitionend', () => {
+      card.style.transition = '';
+      card.style.transform  = '';
+    }, { once: true });
+  });
+}
+
 // FLIP-animate a card into a grid position:
 //  1. Snapshot sibling positions before the DOM move
 //  2. Insert the card
@@ -334,24 +357,7 @@ function placeCardWithFlip(cardEl, grid, refEl, insertBeforeRef) {
   }
 
   // 3. Last + Invert + Play for each displaced sibling
-  siblings.forEach(card => {
-    const before = beforeRects.get(card);
-    const after  = card.getBoundingClientRect();
-    const dx = before.left - after.left;
-    const dy = before.top  - after.top;
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return; // didn't move
-
-    // Snap back to old position instantly, then transition to new position
-    card.style.transition = 'none';
-    card.style.transform  = `translate(${dx}px, ${dy}px)`;
-    void card.offsetWidth; // force reflow
-    card.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
-    card.style.transform  = '';
-    card.addEventListener('transitionend', () => {
-      card.style.transition = '';
-      card.style.transform  = '';
-    }, { once: true });
-  });
+  animateSiblingFlip(siblings, beforeRects);
 
   // 4. Bubble-in spring for the card that just landed
   cardEl.style.animation = 'none';
@@ -409,13 +415,24 @@ async function moveProjectToPhase(projectId, newPhase, targetCardId, insertBefor
 
   if (cardEl && targetGrid) {
     cardEl.dataset.phase = newPhase;
+
+    // Snapshot source-grid siblings BEFORE the card leaves so we can slide them to fill the gap
+    const sourceGrid = sourceSection?.querySelector('.project-grid');
+    const sourceSiblings = sourceGrid
+      ? [...sourceGrid.querySelectorAll('.project-card')].filter(c => c !== cardEl)
+      : [];
+    const sourceBeforeRects = new Map(sourceSiblings.map(c => [c, c.getBoundingClientRect()]));
+
     const refEl = targetCardId
       ? targetGrid.querySelector(`.project-card[data-id="${targetCardId}"]`)
       : null;
+    // placeCardWithFlip moves cardEl (implicitly removing it from sourceGrid) and animates target siblings
     placeCardWithFlip(cardEl, targetGrid, refEl, insertBefore);
 
+    // Animate source siblings sliding left/up to fill the vacated slot
+    animateSiblingFlip(sourceSiblings, sourceBeforeRects);
+
     // If source section is now empty, remove it from the DOM
-    const sourceGrid = sourceSection?.querySelector('.project-grid');
     if (sourceGrid && sourceGrid.children.length === 0) {
       sourceSection.remove();
     }
@@ -537,7 +554,30 @@ async function handleDeleteConfirm() {
   try {
     await api.deleteProject(pendingDeleteId);
     allProjects = allProjects.filter(p => p.id !== pendingDeleteId);
-    renderDashboard();
+
+    const cardEl  = document.querySelector(`.project-card[data-id="${pendingDeleteId}"]`);
+    const grid    = cardEl?.closest('.project-grid');
+    const section = cardEl?.closest('.project-section');
+
+    if (cardEl && grid) {
+      // Snapshot siblings BEFORE removing the card so we can FLIP them into the gap
+      const siblings    = [...grid.querySelectorAll('.project-card')].filter(c => c !== cardEl);
+      const beforeRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
+
+      cardEl.remove();
+
+      if (grid.children.length === 0) {
+        // Section is now empty — remove it entirely
+        section?.remove();
+      } else {
+        // Slide remaining cards to fill the vacated slot
+        animateSiblingFlip(siblings, beforeRects);
+      }
+    } else {
+      // Fallback: full re-render if the card wasn't found in the DOM
+      renderDashboard();
+    }
+
     closeDeleteModal();
     showToast('Project deleted');
   } catch (err) {
