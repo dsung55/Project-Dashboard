@@ -68,8 +68,9 @@ document.addEventListener('visibilitychange', () => {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
-// Rebuild all phase sections dynamically; only show sections that have projects
-function renderDashboard() {
+// Rebuild all phase sections dynamically; only show sections that have projects.
+// Pass animate=false to skip the stagger (used after drag-drop to avoid flash).
+function renderDashboard(animate = true) {
   const container = document.getElementById('phases-container');
   if (!container) return;
 
@@ -89,8 +90,8 @@ function renderDashboard() {
     if (projects.length === 0) return; // Don't show sections with no projects
 
     const section = document.createElement('section');
-    section.className   = 'project-section';
-    section.id          = 'section-phase-' + i;
+    section.className     = 'project-section';
+    section.id            = 'section-phase-' + i;
     section.dataset.phase = phase;
 
     section.innerHTML = `
@@ -99,7 +100,13 @@ function renderDashboard() {
     `;
 
     const grid = section.querySelector('.project-grid');
-    projects.forEach(project => grid.appendChild(buildCard(project)));
+    projects.forEach((project, cardIndex) => {
+      const card = buildCard(project);
+      if (animate) {
+        card.style.animation = `card-appear 300ms cubic-bezier(0.34, 1.1, 0.64, 1) ${cardIndex * 45}ms both`;
+      }
+      grid.appendChild(card);
+    });
 
     container.appendChild(section);
   });
@@ -309,57 +316,122 @@ async function handleSectionDrop(e, section, phase) {
 
 // ── Drag operations ───────────────────────────────────────────────────────────
 
-// Reorder projects within their phase — insertBefore=true places dragged before target, false places it after
+// FLIP-animate a card into a grid position:
+//  1. Snapshot sibling positions before the DOM move
+//  2. Insert the card
+//  3. For every sibling that shifted, play it from old → new position
+//  4. Bubble the dropped card in
+function placeCardWithFlip(cardEl, grid, refEl, insertBeforeRef) {
+  // 1. First: record current rects of every card that isn't the one being moved
+  const siblings = [...grid.querySelectorAll('.project-card')].filter(c => c !== cardEl);
+  const beforeRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
+
+  // 2. DOM move
+  if (refEl) {
+    grid.insertBefore(cardEl, insertBeforeRef ? refEl : refEl.nextSibling);
+  } else {
+    grid.appendChild(cardEl);
+  }
+
+  // 3. Last + Invert + Play for each displaced sibling
+  siblings.forEach(card => {
+    const before = beforeRects.get(card);
+    const after  = card.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top  - after.top;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return; // didn't move
+
+    // Snap back to old position instantly, then transition to new position
+    card.style.transition = 'none';
+    card.style.transform  = `translate(${dx}px, ${dy}px)`;
+    void card.offsetWidth; // force reflow
+    card.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
+    card.style.transform  = '';
+    card.addEventListener('transitionend', () => {
+      card.style.transition = '';
+      card.style.transform  = '';
+    }, { once: true });
+  });
+
+  // 4. Bubble-in spring for the card that just landed
+  cardEl.style.animation = 'none';
+  void cardEl.offsetWidth;
+  cardEl.style.animation = 'card-bubble 380ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+}
+
+// Reorder projects within their phase — FLIP, no full re-render
 function reorderWithinSection(fromId, toId, insertBefore) {
   const fromIdx = allProjects.findIndex(p => p.id === fromId);
   if (fromIdx === -1) return;
 
-  // Splice dragged out first, then find target's updated index
   const [moved] = allProjects.splice(fromIdx, 1);
   const newToIdx = allProjects.findIndex(p => p.id === toId);
   if (newToIdx === -1) return;
-
   allProjects.splice(insertBefore ? newToIdx : newToIdx + 1, 0, moved);
 
-  renderDashboard();
+  const cardEl   = document.querySelector(`.project-card[data-id="${fromId}"]`);
+  const targetEl = document.querySelector(`.project-card[data-id="${toId}"]`);
+  if (cardEl && targetEl?.parentNode) {
+    placeCardWithFlip(cardEl, targetEl.parentNode, targetEl, insertBefore);
+  } else {
+    renderDashboard(false);
+  }
 
-  // Persist the new order (fire-and-forget — UI is already correct)
   api.reorderProjects(allProjects.map(p => p.id)).catch(() => {});
 }
 
-// Move a project to a different phase, optionally inserting before/after a specific card
+// Move a project to a different phase — uses direct DOM move when possible
 async function moveProjectToPhase(projectId, newPhase, targetCardId, insertBefore) {
   const fromIdx = allProjects.findIndex(p => p.id === projectId);
   if (fromIdx === -1) return;
 
-  // Remove from current position and update its phase
+  const cardEl        = document.querySelector(`.project-card[data-id="${projectId}"]`);
+  const sourceSection = cardEl?.closest('.project-section');
+
+  // Update in-memory state
   const [project] = allProjects.splice(fromIdx, 1);
   project.phase = newPhase;
 
   if (targetCardId) {
-    // Insert relative to the card the user aimed at
     const targetIdx = allProjects.findIndex(p => p.id === targetCardId);
     allProjects.splice(targetIdx !== -1
       ? (insertBefore ? targetIdx : targetIdx + 1)
-      : allProjects.length,
-    0, project);
+      : allProjects.length, 0, project);
   } else {
-    // No specific target — append after all other projects already in this phase
     const lastIdx = allProjects.reduce((last, p, i) => p.phase === newPhase ? i : last, -1);
     allProjects.splice(lastIdx + 1, 0, project);
   }
 
-  renderDashboard();
+  // Try to move the DOM node directly — no flash, no re-render
+  const targetSection = [...document.querySelectorAll('.project-section')]
+    .find(s => s.dataset.phase === newPhase);
+  const targetGrid = targetSection?.querySelector('.project-grid');
+
+  if (cardEl && targetGrid) {
+    cardEl.dataset.phase = newPhase;
+    const refEl = targetCardId
+      ? targetGrid.querySelector(`.project-card[data-id="${targetCardId}"]`)
+      : null;
+    placeCardWithFlip(cardEl, targetGrid, refEl, insertBefore);
+
+    // If source section is now empty, remove it from the DOM
+    const sourceGrid = sourceSection?.querySelector('.project-grid');
+    if (sourceGrid && sourceGrid.children.length === 0) {
+      sourceSection.remove();
+    }
+
+    initDragAndDrop(); // re-wire listeners for the moved card's new section
+  } else {
+    // Target section doesn't exist yet (first card entering an empty phase)
+    renderDashboard(false);
+  }
 
   try {
-    // Save full project — server recomputes status from the new phase
     const saved = await api.saveProject(projectId, project);
-    // Update local copy with server-confirmed values
     const idx = allProjects.findIndex(p => p.id === projectId);
     if (idx >= 0) allProjects[idx] = { ...allProjects[idx], ...saved };
-    // Persist the new order
     api.reorderProjects(allProjects.map(p => p.id)).catch(() => {});
-    renderDashboard();
+    // No second renderDashboard — DOM is already correct
   } catch (err) {
     showToast('Could not move project: ' + err.message, true);
     await refreshProjects();
