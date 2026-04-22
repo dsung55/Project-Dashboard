@@ -11,8 +11,9 @@ const PRESET_COLORS = [
 let projectId     = null;
 let projectData   = null;
 let phases        = [];
-let notesTimer    = null;  // debounce timer for notes autosave
-let purposeTimer  = null;  // debounce timer for purpose autosave
+let notesTimer    = null;     // debounce timer for project-level notes autosave
+let taskNotesTimer = null;   // debounce timer for per-task notes autosave (separate to avoid cross-cancellation)
+let purposeTimer  = null;    // debounce timer for purpose autosave
 let expandedTaskId = null; // id of the currently expanded task panel
 let undoStack     = [];    // snapshots of tasks array before each mutation
 const UNDO_MAX    = 20;    // maximum undo history depth
@@ -380,10 +381,15 @@ function buildTaskItem(task, isCurrent = false, isDraggable = false) {
     expandedTaskId = wasExpanded ? null : task.id;
   });
 
-  // Delete task
+  // Delete task — confirm first if task has sub-items
   item.querySelector('.btn-task-delete').addEventListener('click', (e) => {
     e.stopPropagation();
-    deleteTask(task.id);
+    const hasSubItems = task.subItems && task.subItems.length > 0;
+    if (hasSubItems) {
+      confirmDeleteTask(task.id, task.text);
+    } else {
+      deleteTask(task.id);
+    }
   });
 
   // Wire up sub-item interactions
@@ -392,8 +398,8 @@ function buildTaskItem(task, isCurrent = false, isDraggable = false) {
   // Task notes: debounced save
   const notesInput = item.querySelector('.task-notes-input');
   notesInput.addEventListener('input', () => {
-    clearTimeout(notesTimer);
-    notesTimer = setTimeout(() => updateTaskNotes(task.id, notesInput.value), 800);
+    clearTimeout(taskNotesTimer);
+    taskNotesTimer = setTimeout(() => updateTaskNotes(task.id, notesInput.value), 800);
   });
   notesInput.addEventListener('click', e => e.stopPropagation());
 
@@ -714,19 +720,19 @@ function initSubItemDrag(taskItemEl, task) {
   const subList = taskItemEl.querySelector('.sub-items-list');
   if (!subList) return;
 
-  let draggedIndex = null;
+  let draggedSubId = null;
   let lastSubDropTarget = null; // track the highlighted row to avoid querySelectorAll on every dragover
 
   subList.querySelectorAll('.sub-item-row').forEach(row => {
     row.addEventListener('dragstart', (e) => {
-      draggedIndex = parseInt(row.dataset.subIndex, 10);
+      draggedSubId = row.dataset.subId;
       row.classList.add('sub-dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.stopPropagation();  // don't trigger task drag
     });
 
     row.addEventListener('dragend', () => {
-      draggedIndex = null;
+      draggedSubId = null;
       if (lastSubDropTarget) {
         lastSubDropTarget.classList.remove('drop-before', 'drop-after');
         lastSubDropTarget = null;
@@ -738,8 +744,7 @@ function initSubItemDrag(taskItemEl, task) {
     row.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const idx = parseInt(row.dataset.subIndex, 10);
-      if (idx === draggedIndex) return;
+      if (row.dataset.subId === draggedSubId) return;
       // Clear only the previously highlighted row — no full-list querySelectorAll
       if (lastSubDropTarget && lastSubDropTarget !== row) {
         lastSubDropTarget.classList.remove('drop-before', 'drop-after');
@@ -763,16 +768,21 @@ function initSubItemDrag(taskItemEl, task) {
       e.stopPropagation();
       const insertBefore = row.classList.contains('drop-before');
       row.classList.remove('drop-before', 'drop-after');
-      const toIdx = parseInt(row.dataset.subIndex, 10);
-      if (draggedIndex === null || draggedIndex === toIdx) return;
+      const dropSubId = row.dataset.subId;
+      if (draggedSubId === null || draggedSubId === dropSubId) return;
 
       const t = projectData.tasks.find(t => t.id === task.id);
       if (!t || !t.subItems) return;
 
+      // Look up positions by ID so display-order sorts don't corrupt the storage order
+      const subs    = [...t.subItems];
+      const fromIdx = subs.findIndex(s => s.id === draggedSubId);
+      const toIdx   = subs.findIndex(s => s.id === dropSubId);
+      if (fromIdx === -1 || toIdx === -1) return;
+
       // Splice out the dragged item, adjust target index for the removal, then insert
-      const subs = [...t.subItems];
-      const [moved] = subs.splice(draggedIndex, 1);
-      const adjustedToIdx = draggedIndex < toIdx ? toIdx - 1 : toIdx;
+      const [moved] = subs.splice(fromIdx, 1);
+      const adjustedToIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
       subs.splice(insertBefore ? adjustedToIdx : adjustedToIdx + 1, 0, moved);
       t.subItems = subs;
 
@@ -811,6 +821,14 @@ async function toggleTask(taskId) {
   // If we just completed the expanded task, close the panel
   if (task.completed && expandedTaskId === taskId) expandedTaskId = null;
   await saveAndRender();
+}
+
+// Open the delete-task confirmation modal; stores the pending task id on the confirm button
+function confirmDeleteTask(taskId, taskText) {
+  document.getElementById('delete-task-name').textContent = taskText;
+  const confirmBtn = document.getElementById('btn-confirm-delete-task');
+  confirmBtn.dataset.pendingId = taskId;
+  document.getElementById('modal-delete-task').classList.add('open');
 }
 
 // Delete a task by id
@@ -1169,6 +1187,30 @@ const TL_LEVEL_STEP = 78; // additional px per collision level
 const TL_LABEL_H    = 52; // approximate label height in px
 const TL_EDGE_PAD   = 28; // breathing room above/below the outermost labels
 
+// Compute stem/level geometry scaled so the track fits within availH.
+// Returns { stemBase, levelStep, aboveH, belowH, trackH, baselineY }.
+function computeTlGeometry(maxAbove, maxBelow, availH) {
+  let stemBase  = TL_STEM_BASE;
+  let levelStep = TL_LEVEL_STEP;
+
+  const rawAboveH = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxAbove * levelStep;
+  const rawBelowH = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxBelow * levelStep;
+  const rawH      = rawAboveH + rawBelowH + 4;
+
+  // Scale down so the track never exceeds the visible area
+  if (availH > 0 && rawH > availH) {
+    const scale = availH / rawH;
+    stemBase  = Math.max(14, Math.round(TL_STEM_BASE  * scale));
+    levelStep = Math.max(20, Math.round(TL_LEVEL_STEP * scale));
+  }
+
+  const aboveH    = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxAbove * levelStep;
+  const belowH    = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxBelow * levelStep;
+  const trackH    = aboveH + belowH + 4;
+  const baselineY = aboveH;
+  return { stemBase, levelStep, aboveH, belowH, trackH, baselineY };
+}
+
 // DOM references cached on initial render — updated by repositionTimeline without rebuilding
 let tlPinEls     = []; // pin elements index-aligned with tlDatedItems
 let tlLabelEls   = []; // label elements, stored in a separate overlay so they always render above stems
@@ -1320,10 +1362,10 @@ function renderTimeline() {
     else                    maxBelow = Math.max(maxBelow, p.level);
   });
 
-  const aboveH   = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxAbove * TL_LEVEL_STEP;
-  const belowH   = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxBelow * TL_LEVEL_STEP;
-  const trackH   = aboveH + belowH + 4; // +4 for the baseline thickness
-  const baselineY = aboveH;
+  // Auto-scale geometry so all stacked labels fit without overflowing the modal
+  const availH = (wrap?.clientHeight || 600) - 48; // subtract vertical padding
+  const { stemBase, levelStep, aboveH, belowH, trackH, baselineY } =
+    computeTlGeometry(maxAbove, maxBelow, availH);
 
   track.style.height = trackH + 'px';
 
@@ -1394,7 +1436,7 @@ function renderTimeline() {
       ? (taskColorMap[item.parentId] || projectColor)
       : (taskColorMap[item.taskId]   || projectColor);
 
-    const stemH = TL_STEM_BASE + level * TL_LEVEL_STEP;
+    const stemH = stemBase + level * levelStep;
     const pin   = buildPin({
       pct,
       isAbove:    side === 'above',
@@ -1428,7 +1470,7 @@ function renderTimeline() {
     const label = pin?.querySelector('.tl-pin-label');
     if (!label) { tlLabelEls.push(null); return; }
 
-    const stemH   = TL_STEM_BASE + level * TL_LEVEL_STEP;
+    const stemH   = stemBase + level * levelStep;
     const isAbove = side === 'above';
 
     // Rewrite position from pin-relative to track-absolute using bottom (above) or top (below)
@@ -1492,10 +1534,10 @@ function repositionTimeline() {
     if (p.side === 'above') maxAbove = Math.max(maxAbove, p.level);
     else                    maxBelow = Math.max(maxBelow, p.level);
   });
-  const aboveH    = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxAbove * TL_LEVEL_STEP;
-  const belowH    = TL_EDGE_PAD + TL_LABEL_H + TL_STEM_BASE + maxBelow * TL_LEVEL_STEP;
-  const trackH    = aboveH + belowH + 4;
-  const baselineY = aboveH;
+  // Auto-scale geometry to fit within the visible area (same logic as renderTimeline)
+  const repositionAvailH = (wrap?.clientHeight || 600) - 48;
+  const { stemBase, levelStep, aboveH, belowH, trackH, baselineY } =
+    computeTlGeometry(maxAbove, maxBelow, repositionAvailH);
 
   track.style.height = trackH + 'px';
   if (tlBaselineEl) tlBaselineEl.style.top = baselineY + 'px';
@@ -1548,7 +1590,7 @@ function repositionTimeline() {
     pin.classList.toggle('tl-above', isAbove);
     pin.classList.toggle('tl-below', !isAbove);
 
-    const stemH = TL_STEM_BASE + level * TL_LEVEL_STEP;
+    const stemH = stemBase + level * levelStep;
     const stem  = pin.querySelector('.tl-pin-stem');
 
     if (stem) {
@@ -1962,5 +2004,17 @@ document.addEventListener('DOMContentLoaded', () => {
     ?.addEventListener('click', handleDeleteProjectConfirm);
   document.getElementById('modal-delete-project')
     ?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeProjectDeleteModal(); });
+
+  // Delete task confirmation modal
+  document.getElementById('btn-cancel-delete-task')
+    ?.addEventListener('click', () => document.getElementById('modal-delete-task').classList.remove('open'));
+  document.getElementById('btn-confirm-delete-task')
+    ?.addEventListener('click', (e) => {
+      const taskId = e.currentTarget.dataset.pendingId;
+      document.getElementById('modal-delete-task').classList.remove('open');
+      if (taskId) deleteTask(taskId);
+    });
+  document.getElementById('modal-delete-task')
+    ?.addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 });
 

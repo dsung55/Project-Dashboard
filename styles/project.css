@@ -1034,7 +1034,7 @@
   font-weight: 700;
 }
 
-/* Scrollable area — flex column so content is vertically centered */
+/* Scrollable area — flex column, content starts at top so overflow is always reachable */
 .timeline-scroll-wrap {
   flex:           1;
   overflow:       auto;
@@ -1042,7 +1042,7 @@
   position:       relative;
   display:        flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items:    stretch;
   cursor:         grab;
   user-select:    none;

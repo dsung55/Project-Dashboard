@@ -182,6 +182,20 @@
     </div>
   </div>
 
+  <!-- Delete task confirmation modal (shown only when task has sub-items) -->
+  <div class="modal-overlay" id="modal-delete-task">
+    <div class="modal">
+      <div class="modal-title">Delete Task?</div>
+      <p class="text-secondary modal-body-text">
+        <strong id="delete-task-name"></strong> has sub-tasks that will also be deleted. This cannot be undone.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-delete-task">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete-task">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Timeline modal -->
   <div class="modal-overlay timeline-overlay" id="modal-timeline">
     <div class="timeline-modal">

@@ -3,6 +3,13 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.3 — FLIP Animations & Delete Confirmation
+
+- **FLIP task reorder animation:** Tasks animate smoothly into their new positions when dragged to reorder — each row slides from where it was to where it ends up instead of snapping instantly
+- **FLIP card reorder animation:** Dashboard project cards animate into new positions when dragged within or between sections, using the same FLIP technique
+- **Sibling departure animation:** When a task is deleted or a card is removed, neighboring items smoothly slide to fill the gap rather than jumping
+- **Delete confirmation for tasks with sub-tasks:** Deleting a task that has sub-tasks now shows a confirmation popup listing the task name — prevents accidental deletion of tasks with nested work
+
 ## v1.5.2 — Calendar Picker, Timeline Spacing & UI Modernization
 
 - **Calendar date picker:** The three MM/DD/YYYY inputs in the add-task row are replaced with a calendar icon button. Clicking it opens a mini inline calendar with month/year dropdowns and a grid of days. Selecting a day sets the due date and closes the picker. A "Clear" link resets it. (Existing task date editing is unchanged.)

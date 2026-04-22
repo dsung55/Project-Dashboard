@@ -8,7 +8,9 @@ const app  = express();
 const PORT = 3000;
 
 // ── Path constants ────────────────────────────────────────────────────────────
-const DATA_DIR     = path.join(__dirname, 'data');
+// When running inside Electron, DATA_DIR is set to app.getPath('userData')/data
+// so data survives in a writable OS folder rather than next to the packaged exe.
+const DATA_DIR     = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PROJECTS_DIR = path.join(DATA_DIR, 'projects');
 const PROJECTS_IDX = path.join(DATA_DIR, 'projects.json');
 const CONFIG_FILE  = path.join(DATA_DIR, 'config.json');
@@ -253,95 +255,130 @@ app.put('/api/tasks', (req, res) => {
 
 // ── First-run bootstrap ───────────────────────────────────────────────────────
 
-// Example project seeded on first install so new users aren't greeted by an empty screen.
-const EXAMPLE_PROJECT = {
-  id: '00000000-0000-0000-0000-000000000001',
-  name: '[Example] Diet App',
-  color: '#30D158',
-  phase: 'In Progress',
-  version: 'v1.0',
-  status: 'ongoing',
-  notes: '',
-  purpose: 'Track daily nutrition, build healthy meal habits, and monitor weight loss progress over 90 days.',
-  createdAt: '2026-03-01T10:00:00.000Z',
-  files: [],
-  tasks: [
-    // ── Completed ─────────────────────────────────────────────────────────────
-    {
-      id: 'ex-task-001', text: 'Define daily calorie and macro goals',
-      completed: true, completedAt: '2026-03-02T09:15:00.000Z', notes: '',
-      subItems: [
-        { id: 'ex-sub-001a', text: 'Use a TDEE calculator to find maintenance calories', completed: true, dueDate: null },
-        { id: 'ex-sub-001b', text: 'Set protein / carb / fat ratios (40/35/25)', completed: true, dueDate: null }
-      ]
-    },
-    {
-      id: 'ex-task-002', text: 'Research meal tracking apps for inspiration',
-      completed: true, completedAt: '2026-03-05T14:30:00.000Z', notes: '',
-      subItems: []
-    },
-    {
-      id: 'ex-task-003', text: 'Build a weekly grocery list template',
-      completed: true, completedAt: '2026-03-10T11:00:00.000Z', notes: '',
-      subItems: [
-        { id: 'ex-sub-003a', text: 'List lean protein sources', completed: true, dueDate: null },
-        { id: 'ex-sub-003b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
-        { id: 'ex-sub-003c', text: 'List pantry staples to always keep stocked', completed: true, dueDate: null }
-      ]
-    },
-    {
-      id: 'ex-task-004', text: 'Log every meal for the first two weeks',
-      completed: true, completedAt: '2026-03-18T20:00:00.000Z', notes: '',
-      subItems: []
-    },
-    {
-      id: 'ex-task-005', text: 'Set up a weekly weigh-in routine',
-      completed: true, completedAt: '2026-03-20T08:00:00.000Z', notes: '',
-      subItems: [
-        { id: 'ex-sub-005a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
-        { id: 'ex-sub-005b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
-      ]
-    },
-    {
-      id: 'ex-task-006', text: 'Identify go-to high-protein breakfast options',
-      completed: true, completedAt: '2026-03-25T07:45:00.000Z', notes: '',
-      subItems: []
-    },
-    // ── Incomplete ────────────────────────────────────────────────────────────
-    {
-      id: 'ex-task-007', text: 'Plan and prep meals every Sunday for the week ahead',
-      completed: false, completedAt: null, notes: '', dueDate: '2026-04-13T10:00:00.000Z',
-      subItems: [
-        { id: 'ex-sub-007a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: '2026-04-13T10:00:00.000Z' },
-        { id: 'ex-sub-007b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: '2026-04-13T10:00:00.000Z' }
-      ]
-    },
-    {
-      id: 'ex-task-008', text: 'Track daily water intake (target: 3L per day)',
-      completed: false, completedAt: null, notes: '', dueDate: '2026-04-10T00:00:00.000Z',
-      subItems: []
-    },
-    {
-      id: 'ex-task-009', text: 'Research healthy restaurant options near the office',
-      completed: false, completedAt: null, notes: '', dueDate: '2026-04-15T00:00:00.000Z',
-      subItems: [
-        { id: 'ex-sub-009a', text: 'Find 3 lunch spots that publish nutrition info', completed: false, dueDate: '2026-04-15T00:00:00.000Z' },
-        { id: 'ex-sub-009b', text: 'Identify the safest menu items at each spot', completed: false, dueDate: '2026-04-15T00:00:00.000Z' },
-        { id: 'ex-sub-009c', text: 'Set a 700 cal max for any eating-out lunch', completed: false, dueDate: '2026-04-15T00:00:00.000Z' }
-      ]
-    },
-    {
-      id: 'ex-task-010', text: 'Define cheat meal rules and frequency',
-      completed: false, completedAt: null, notes: '', dueDate: '2026-04-20T00:00:00.000Z',
-      subItems: []
-    },
-    {
-      id: 'ex-task-011', text: 'Review 30-day progress and adjust the plan',
-      completed: false, completedAt: null, notes: '', dueDate: '2026-05-01T00:00:00.000Z',
-      subItems: []
-    }
-  ]
-};
+// Returns a Date offset by `days` from a base date at a fixed time.
+function daysFrom(base, days, hours = 9, minutes = 0) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
+// Converts a Date to the { month, day, year } object the UI uses for due dates.
+function toDateObj(d) {
+  return { month: String(d.getMonth() + 1), day: String(d.getDate()), year: String(d.getFullYear()) };
+}
+
+// Builds the example project with all dates computed relative to today so they
+// always look realistic regardless of when the app is first installed.
+// Completed tasks span from ~1 year ago up to recently; incomplete tasks have
+// due dates spread from near-term out to ~1 year in the future.
+function buildExampleProject() {
+  const now = new Date();
+
+  // completedAt values (ISO strings — sorted newest-first in the UI)
+  const c1 = daysFrom(now, -365, 9,  15).toISOString();  // ~1 year ago
+  const c2 = daysFrom(now, -300, 14, 30).toISOString();  // ~10 months ago
+  const c3 = daysFrom(now, -240, 11,  0).toISOString();  // ~8 months ago
+  const c4 = daysFrom(now, -180, 20,  0).toISOString();  // ~6 months ago
+  const c5 = daysFrom(now, -120,  8,  0).toISOString();  // ~4 months ago
+  const c6 = daysFrom(now,  -60,  7, 45).toISOString();  // ~2 months ago
+
+  // dueDate values ({ month, day, year } — the format the UI reads and writes)
+  const d1 = toDateObj(daysFrom(now,   30, 10,  0));  // ~1 month out
+  const d2 = toDateObj(daysFrom(now,   60,  0,  0));  // ~2 months out
+  const d3 = toDateObj(daysFrom(now,  120,  0,  0));  // ~4 months out
+  const d4 = toDateObj(daysFrom(now,  210,  0,  0));  // ~7 months out
+  const d5 = toDateObj(daysFrom(now,  365,  0,  0));  // ~1 year out
+
+  return {
+    id: '00000000-0000-0000-0000-000000000001',
+    name: '[Example] Diet App',
+    color: '#30D158',
+    phase: 'In Progress',
+    version: 'v1.0',
+    status: 'ongoing',
+    notes: '',
+    purpose: 'Track daily nutrition, build healthy meal habits, and monitor weight loss progress over 90 days.',
+    createdAt: daysFrom(now, -365, 10, 0).toISOString(),
+    files: [],
+    tasks: [
+      // ── Completed ───────────────────────────────────────────────────────────
+      {
+        id: 'ex-task-001', text: 'Define daily calorie and macro goals',
+        completed: true, completedAt: c1, notes: '',
+        subItems: [
+          { id: 'ex-sub-001a', text: 'Use a TDEE calculator to find maintenance calories', completed: true, dueDate: null },
+          { id: 'ex-sub-001b', text: 'Set protein / carb / fat ratios (40/35/25)', completed: true, dueDate: null }
+        ]
+      },
+      {
+        id: 'ex-task-002', text: 'Research meal tracking apps for inspiration',
+        completed: true, completedAt: c2, notes: '',
+        subItems: []
+      },
+      {
+        id: 'ex-task-003', text: 'Build a weekly grocery list template',
+        completed: true, completedAt: c3, notes: '',
+        subItems: [
+          { id: 'ex-sub-003a', text: 'List lean protein sources', completed: true, dueDate: null },
+          { id: 'ex-sub-003b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
+          { id: 'ex-sub-003c', text: 'List pantry staples to always keep stocked', completed: true, dueDate: null }
+        ]
+      },
+      {
+        id: 'ex-task-004', text: 'Log every meal for the first two weeks',
+        completed: true, completedAt: c4, notes: '',
+        subItems: []
+      },
+      {
+        id: 'ex-task-005', text: 'Set up a weekly weigh-in routine',
+        completed: true, completedAt: c5, notes: '',
+        subItems: [
+          { id: 'ex-sub-005a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
+          { id: 'ex-sub-005b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
+        ]
+      },
+      {
+        id: 'ex-task-006', text: 'Identify go-to high-protein breakfast options',
+        completed: true, completedAt: c6, notes: '',
+        subItems: []
+      },
+      // ── Incomplete ──────────────────────────────────────────────────────────
+      {
+        id: 'ex-task-007', text: 'Plan and prep meals every Sunday for the week ahead',
+        completed: false, completedAt: null, notes: '', dueDate: d1,
+        subItems: [
+          { id: 'ex-sub-007a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: d1 },
+          { id: 'ex-sub-007b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: d1 }
+        ]
+      },
+      {
+        id: 'ex-task-008', text: 'Track daily water intake (target: 3L per day)',
+        completed: false, completedAt: null, notes: '', dueDate: d2,
+        subItems: []
+      },
+      {
+        id: 'ex-task-009', text: 'Research healthy restaurant options near the office',
+        completed: false, completedAt: null, notes: '', dueDate: d3,
+        subItems: [
+          { id: 'ex-sub-009a', text: 'Find 3 lunch spots that publish nutrition info', completed: false, dueDate: d3 },
+          { id: 'ex-sub-009b', text: 'Identify the safest menu items at each spot', completed: false, dueDate: d3 },
+          { id: 'ex-sub-009c', text: 'Set a 700 cal max for any eating-out lunch', completed: false, dueDate: d3 }
+        ]
+      },
+      {
+        id: 'ex-task-010', text: 'Define cheat meal rules and frequency',
+        completed: false, completedAt: null, notes: '', dueDate: d4,
+        subItems: []
+      },
+      {
+        id: 'ex-task-011', text: 'Review 30-day progress and adjust the plan',
+        completed: false, completedAt: null, notes: '', dueDate: d5,
+        subItems: []
+      }
+    ]
+  };
+}
 
 // Creates the /data/ folder structure and default files on a fresh install.
 // Safe to run every startup — skips anything that already exists.
@@ -360,12 +397,13 @@ function bootstrap() {
 
   // Seed projects.json and example project on a brand-new install
   if (!fs.existsSync(PROJECTS_IDX)) {
-    // Create the example project folder and write its data
-    ensureProjectDir(EXAMPLE_PROJECT.id);
-    writeJSON(path.join(PROJECTS_DIR, EXAMPLE_PROJECT.id, 'project.json'), EXAMPLE_PROJECT);
+    // Build example project with dates relative to today and seed it
+    const exampleProject = buildExampleProject();
+    ensureProjectDir(exampleProject.id);
+    writeJSON(path.join(PROJECTS_DIR, exampleProject.id, 'project.json'), exampleProject);
 
     // Write the index with just the example project entry
-    writeJSON(PROJECTS_IDX, [toIndexEntry(EXAMPLE_PROJECT)]);
+    writeJSON(PROJECTS_IDX, [toIndexEntry(exampleProject)]);
     console.log('Seeded example project on first run.');
   }
 }
@@ -397,9 +435,59 @@ function migrateIndex() {
   }
 }
 
+// Converts an ISO date string to a { month, day, year } object the UI expects.
+function isoToDateObj(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return { month: String(d.getMonth() + 1), day: String(d.getDate()), year: String(d.getFullYear()) };
+}
+
+// One-time fix: scan every project file and convert any dueDate stored as an
+// ISO string into the { month, day, year } shape the UI reads and writes.
+function migrateDueDates() {
+  const index = readJSON(PROJECTS_IDX, []);
+  for (const entry of index) {
+    const projPath = path.join(PROJECTS_DIR, entry.id, 'project.json');
+    const project  = readJSON(projPath);
+    if (!project) continue;
+
+    let changed = false;
+    const fixDate = (obj) => {
+      if (typeof obj.dueDate === 'string') {
+        obj.dueDate = isoToDateObj(obj.dueDate);
+        changed = true;
+      }
+    };
+
+    for (const task of (project.tasks || [])) {
+      fixDate(task);
+      for (const sub of (task.subItems || [])) fixDate(sub);
+    }
+
+    if (changed) {
+      writeJSON(projPath, project);
+      console.log(`Migrated dueDate format in project ${entry.id}`);
+    }
+  }
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
-bootstrap();
-migrateIndex();
-app.listen(PORT, () => {
-  console.log(`Dashboard running at http://localhost:${PORT}`);
-});
+
+// Exported so electron.js can call startServer(callback) and open the window
+// only after Express is confirmed listening — avoids a race condition on load.
+function startServer(callback) {
+  bootstrap();
+  migrateIndex();
+  migrateDueDates();
+  app.listen(PORT, () => {
+    console.log(`Dashboard running at http://localhost:${PORT}`);
+    if (callback) callback();
+  });
+}
+
+// When run directly with `node server.js`, start immediately
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { startServer };
