@@ -6,3 +6,6 @@ data/projects/
 data/projects.json
 data/tasks.json
 data/config.json
+
+# Claude Code project settings (local paths, user-specific permissions)
+.claude/

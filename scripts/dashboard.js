@@ -184,62 +184,58 @@ function buildCard(project) {
 
 // ── Drag and drop ─────────────────────────────────────────────────────────────
 
-// Wire up drag-and-drop for all cards and phase sections
-function initDragAndDrop() {
-  document.querySelectorAll('.project-card').forEach(card => {
-    card.addEventListener('dragstart', handleCardDragStart);
-    card.addEventListener('dragend',   handleCardDragEnd);
+// Wire drag-and-drop events on a single card (called at init and when a card is created)
+function wireCardDrag(card) {
+  card.addEventListener('dragstart', handleCardDragStart);
+  card.addEventListener('dragend',   handleCardDragEnd);
 
-    // Show a vertical blue line on the left or right of the card based on cursor position
-    card.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      if (!draggedProject || card.dataset.id === draggedProject.id) return;
-      e.dataTransfer.dropEffect = 'move';
-
-      if (card.dataset.phase === draggedProject.phase) {
-        // Same phase: show insertion indicator; stop propagation so section doesn't highlight
-        e.stopPropagation();
-        const rect   = card.getBoundingClientRect();
-        const isLeft = e.clientX < rect.left + rect.width / 2;
-        clearCardDropIndicators();
-        card.classList.add(isLeft ? 'drop-before' : 'drop-after');
-        dropTargetCard   = card;
-        dropInsertBefore = isLeft;
-      }
-      // Cross-phase: let event bubble to section handler for outline highlight
-    });
-
-    // Remove indicator when cursor leaves this card
-    card.addEventListener('dragleave', (e) => {
-      if (!card.contains(e.relatedTarget)) {
-        card.classList.remove('drop-before', 'drop-after');
-        if (dropTargetCard === card) dropTargetCard = null;
-      }
-    });
-
-    // Drop on a card — within-phase reorder uses before/after indicator; cross-phase bubbles to section
-    card.addEventListener('drop', (e) => {
-      e.preventDefault();
-      if (!draggedProject || card.dataset.id === draggedProject.id) return;
-
-      const targetProject = allProjects.find(p => p.id === card.dataset.id);
-      if (!targetProject) return;
-
-      if (targetProject.phase === draggedProject.phase) {
-        e.stopPropagation(); // prevent section drop handler from also firing
-        const before = card.classList.contains('drop-before');
-        reorderWithinSection(draggedProject.id, card.dataset.id, before);
-      }
-      // Cross-phase: bubbles up to section drop handler
-    });
+  card.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!draggedProject || card.dataset.id === draggedProject.id) return;
+    e.dataTransfer.dropEffect = 'move';
+    if (card.dataset.phase === draggedProject.phase) {
+      e.stopPropagation();
+      const rect   = card.getBoundingClientRect();
+      const isLeft = e.clientX < rect.left + rect.width / 2;
+      clearCardDropIndicators();
+      card.classList.add(isLeft ? 'drop-before' : 'drop-after');
+      dropTargetCard   = card;
+      dropInsertBefore = isLeft;
+    }
   });
 
-  // Sections: highlight outline when dragging in from another phase; drop to move
+  card.addEventListener('dragleave', (e) => {
+    if (!card.contains(e.relatedTarget)) {
+      card.classList.remove('drop-before', 'drop-after');
+      if (dropTargetCard === card) dropTargetCard = null;
+    }
+  });
+
+  card.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!draggedProject || card.dataset.id === draggedProject.id) return;
+    const targetProject = allProjects.find(p => p.id === card.dataset.id);
+    if (!targetProject) return;
+    if (targetProject.phase === draggedProject.phase) {
+      e.stopPropagation();
+      const before = card.classList.contains('drop-before');
+      reorderWithinSection(draggedProject.id, card.dataset.id, before);
+    }
+  });
+}
+
+// Wire drag-and-drop events on a section (called at init and when a section is created)
+function wireSectionDrag(section, phase) {
+  section.addEventListener('dragover',  (e) => handleSectionDragOver(e, section, phase));
+  section.addEventListener('dragleave', (e) => handleSectionDragLeave(e, section));
+  section.addEventListener('drop',      (e) => handleSectionDrop(e, section, phase));
+}
+
+// Wire up drag-and-drop for all cards and phase sections
+function initDragAndDrop() {
+  document.querySelectorAll('.project-card').forEach(wireCardDrag);
   document.querySelectorAll('.project-section').forEach(section => {
-    const phase = section.dataset.phase;
-    section.addEventListener('dragover',  (e) => handleSectionDragOver(e, section, phase));
-    section.addEventListener('dragleave', (e) => handleSectionDragLeave(e, section));
-    section.addEventListener('drop',      (e) => handleSectionDrop(e, section, phase));
+    wireSectionDrag(section, section.dataset.phase);
   });
 }
 
@@ -339,60 +335,66 @@ function animateSiblingFlip(siblings, beforeRects) {
   });
 }
 
-// FLIP-animate a card into a grid position:
-//  1. Snapshot sibling positions before the DOM move
-//  2. Insert the card
-//  3. For every sibling that shifted, play it from old → new position
-//  4. Bubble the dropped card in
-function placeCardWithFlip(cardEl, grid, refEl, insertBeforeRef) {
-  // 1. First: record current rects of every card that isn't the one being moved
-  const siblings = [...grid.querySelectorAll('.project-card')].filter(c => c !== cardEl);
-  const beforeRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
+// After a renderDashboard(false), FLIP-animate all cards from their captured positions to their new ones.
+// movedId: this card gets a bubble-in instead of a slide (it's the one the user just dropped).
+function flipAnimateCards(beforeRects, movedId) {
+  document.querySelectorAll('.project-card').forEach(card => {
+    const before = beforeRects.get(card.dataset.id);
+    if (!before) return;
+    const after = card.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top  - after.top;
 
-  // 2. DOM move
-  if (refEl) {
-    grid.insertBefore(cardEl, insertBeforeRef ? refEl : refEl.nextSibling);
-  } else {
-    grid.appendChild(cardEl);
-  }
-
-  // 3. Last + Invert + Play for each displaced sibling
-  animateSiblingFlip(siblings, beforeRects);
-
-  // 4. Bubble-in spring for the card that just landed
-  cardEl.style.animation = 'none';
-  void cardEl.offsetWidth;
-  cardEl.style.animation = 'card-bubble 380ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+    if (card.dataset.id === movedId) {
+      card.style.animation = 'none';
+      void card.offsetWidth;
+      card.style.animation = 'card-bubble 380ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+    } else if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+      card.style.transition = 'none';
+      card.style.transform  = `translate(${dx}px, ${dy}px)`;
+      void card.offsetWidth;
+      card.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
+      card.style.transform  = '';
+      card.addEventListener('transitionend', () => {
+        card.style.transition = '';
+        card.style.transform  = '';
+      }, { once: true });
+    }
+  });
 }
 
-// Reorder projects within their phase — FLIP, no full re-render
+// Reorder projects within their phase — snapshot, re-render, FLIP
 function reorderWithinSection(fromId, toId, insertBefore) {
   const fromIdx = allProjects.findIndex(p => p.id === fromId);
   if (fromIdx === -1) return;
 
+  // Snapshot all card positions by ID before the DOM changes
+  const beforeRects = new Map();
+  document.querySelectorAll('.project-card').forEach(card => {
+    beforeRects.set(card.dataset.id, card.getBoundingClientRect());
+  });
+
   const [moved] = allProjects.splice(fromIdx, 1);
   const newToIdx = allProjects.findIndex(p => p.id === toId);
-  if (newToIdx === -1) return;
+  if (newToIdx === -1) { allProjects.splice(fromIdx, 0, moved); return; }
   allProjects.splice(insertBefore ? newToIdx : newToIdx + 1, 0, moved);
 
-  const cardEl   = document.querySelector(`.project-card[data-id="${fromId}"]`);
-  const targetEl = document.querySelector(`.project-card[data-id="${toId}"]`);
-  if (cardEl && targetEl?.parentNode) {
-    placeCardWithFlip(cardEl, targetEl.parentNode, targetEl, insertBefore);
-  } else {
-    renderDashboard(false);
-  }
+  renderDashboard(false);
+  flipAnimateCards(beforeRects, fromId);
 
   api.reorderProjects(allProjects.map(p => p.id)).catch(() => {});
 }
 
-// Move a project to a different phase — uses direct DOM move when possible
+// Move a project to a different phase — snapshot, re-render, FLIP
 async function moveProjectToPhase(projectId, newPhase, targetCardId, insertBefore) {
   const fromIdx = allProjects.findIndex(p => p.id === projectId);
   if (fromIdx === -1) return;
 
-  const cardEl        = document.querySelector(`.project-card[data-id="${projectId}"]`);
-  const sourceSection = cardEl?.closest('.project-section');
+  // Snapshot all card positions by ID before the DOM changes
+  const beforeRects = new Map();
+  document.querySelectorAll('.project-card').forEach(card => {
+    beforeRects.set(card.dataset.id, card.getBoundingClientRect());
+  });
 
   // Update in-memory state
   const [project] = allProjects.splice(fromIdx, 1);
@@ -408,47 +410,14 @@ async function moveProjectToPhase(projectId, newPhase, targetCardId, insertBefor
     allProjects.splice(lastIdx + 1, 0, project);
   }
 
-  // Try to move the DOM node directly — no flash, no re-render
-  const targetSection = [...document.querySelectorAll('.project-section')]
-    .find(s => s.dataset.phase === newPhase);
-  const targetGrid = targetSection?.querySelector('.project-grid');
-
-  if (cardEl && targetGrid) {
-    cardEl.dataset.phase = newPhase;
-
-    // Snapshot source-grid siblings BEFORE the card leaves so we can slide them to fill the gap
-    const sourceGrid = sourceSection?.querySelector('.project-grid');
-    const sourceSiblings = sourceGrid
-      ? [...sourceGrid.querySelectorAll('.project-card')].filter(c => c !== cardEl)
-      : [];
-    const sourceBeforeRects = new Map(sourceSiblings.map(c => [c, c.getBoundingClientRect()]));
-
-    const refEl = targetCardId
-      ? targetGrid.querySelector(`.project-card[data-id="${targetCardId}"]`)
-      : null;
-    // placeCardWithFlip moves cardEl (implicitly removing it from sourceGrid) and animates target siblings
-    placeCardWithFlip(cardEl, targetGrid, refEl, insertBefore);
-
-    // Animate source siblings sliding left/up to fill the vacated slot
-    animateSiblingFlip(sourceSiblings, sourceBeforeRects);
-
-    // If source section is now empty, remove it from the DOM
-    if (sourceGrid && sourceGrid.children.length === 0) {
-      sourceSection.remove();
-    }
-
-    initDragAndDrop(); // re-wire listeners for the moved card's new section
-  } else {
-    // Target section doesn't exist yet (first card entering an empty phase)
-    renderDashboard(false);
-  }
+  renderDashboard(false);
+  flipAnimateCards(beforeRects, projectId);
 
   try {
     const saved = await api.saveProject(projectId, project);
     const idx = allProjects.findIndex(p => p.id === projectId);
     if (idx >= 0) allProjects[idx] = { ...allProjects[idx], ...saved };
     api.reorderProjects(allProjects.map(p => p.id)).catch(() => {});
-    // No second renderDashboard — DOM is already correct
   } catch (err) {
     showToast('Could not move project: ' + err.message, true);
     await refreshProjects();
@@ -504,7 +473,7 @@ function closeCreateModal() {
   resetColorPicker();
 }
 
-// Handle create form submission
+// Handle create form submission — inserts the card directly with FLIP animation
 async function handleCreate(e) {
   e.preventDefault();
   const name  = document.getElementById('new-project-name').value.trim();
@@ -520,12 +489,49 @@ async function handleCreate(e) {
       color,
       phase
     });
-    allProjects.push({
-      ...project,
-      taskCount:          0,
-      completedTaskCount: 0
-    });
-    renderDashboard();
+    allProjects.push({ ...project, taskCount: 0, completedTaskCount: 0 });
+
+    // Find or create the target phase section
+    const phaseIdx = allPhases.indexOf(phase);
+    const sectionId = 'section-phase-' + phaseIdx;
+    let section = document.getElementById(sectionId);
+    let grid;
+
+    if (!section) {
+      // First project in this phase — create section and insert it in phase order
+      section = document.createElement('section');
+      section.className     = 'project-section';
+      section.id            = sectionId;
+      section.dataset.phase = phase;
+      section.innerHTML     = `
+        <div class="section-heading">${escapeHtml(phase)}</div>
+        <div class="project-grid" id="grid-phase-${phaseIdx}"></div>
+      `;
+      grid = section.querySelector('.project-grid');
+      const container = document.getElementById('phases-container');
+      const existing  = [...container.querySelectorAll('.project-section')];
+      const insertRef = existing.find(s => allPhases.indexOf(s.dataset.phase) > phaseIdx) || null;
+      container.insertBefore(section, insertRef);
+      wireSectionDrag(section, phase);
+    } else {
+      grid = section.querySelector('.project-grid');
+    }
+
+    // Snapshot sibling positions BEFORE inserting so we can FLIP them
+    const siblings    = [...grid.querySelectorAll('.project-card')];
+    const beforeRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
+
+    // Build and insert the new card
+    const card = buildCard(project);
+    grid.appendChild(card);
+    wireCardDrag(card);
+
+    // Slide existing cards to make room
+    animateSiblingFlip(siblings, beforeRects);
+
+    // Bubble the new card in
+    card.style.animation = 'card-bubble 380ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+
     closeCreateModal();
     showToast('Project created');
   } catch (err) {
@@ -560,19 +566,22 @@ async function handleDeleteConfirm() {
     const section = cardEl?.closest('.project-section');
 
     if (cardEl && grid) {
-      // Snapshot siblings BEFORE removing the card so we can FLIP them into the gap
+      // Snapshot siblings BEFORE removing so we can FLIP them into the gap
       const siblings    = [...grid.querySelectorAll('.project-card')].filter(c => c !== cardEl);
       const beforeRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
 
-      cardEl.remove();
-
-      if (grid.children.length === 0) {
-        // Section is now empty — remove it entirely
-        section?.remove();
-      } else {
-        // Slide remaining cards to fill the vacated slot
-        animateSiblingFlip(siblings, beforeRects);
-      }
+      // Scale-out the deleted card, then remove it and slide siblings into the gap
+      cardEl.style.transition = 'transform 180ms ease, opacity 180ms ease';
+      cardEl.style.transform  = 'scale(0.82)';
+      cardEl.style.opacity    = '0';
+      setTimeout(() => {
+        cardEl.remove();
+        if (grid.children.length === 0) {
+          section?.remove();
+        } else {
+          animateSiblingFlip(siblings, beforeRects);
+        }
+      }, 180);
     } else {
       // Fallback: full re-render if the card wasn't found in the DOM
       renderDashboard();

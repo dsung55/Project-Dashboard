@@ -215,6 +215,14 @@
   opacity: 0.4;
 }
 
+/* Bubble-in: played on the task that just landed in its new slot */
+@keyframes task-bubble {
+  0%   { transform: scale(0.88); opacity: 0.5; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  80%  { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+
 /* Horizontal insertion line above or below a task during reordering */
 /* box-shadow is not clipped by the element's own overflow:hidden — safe to use here */
 .task-item.drop-before { box-shadow: 0 -3px 0 0 var(--blue); }

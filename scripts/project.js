@@ -653,6 +653,12 @@ function initTaskDrag(list, activeTasks) {
       const toIdx      = activeIds.indexOf(item.dataset.id);
       if (fromIdx === -1 || toIdx === -1) return;
 
+      // Snapshot task positions BEFORE the DOM changes so we can FLIP-animate them
+      const taskList    = document.getElementById('task-list');
+      const allItemEls  = [...taskList.querySelectorAll('.task-item')];
+      const beforeRects = new Map(allItemEls.map(el => [el.dataset.id, el.getBoundingClientRect()]));
+      const movedId     = draggedTaskId;
+
       // Splice out the dragged task, then insert before or after the target
       pushUndo();
       const allTasks       = projectData.tasks || [];
@@ -663,7 +669,40 @@ function initTaskDrag(list, activeTasks) {
       withoutDragged.splice(insertBefore ? targetInAll : targetInAll + 1, 0, draggedObj);
       projectData.tasks = withoutDragged;
 
-      await saveAndRender();
+      // Re-render the task list first so the DOM reflects the new order
+      renderTasks();
+
+      // FLIP: animate each task from its captured position to its new position
+      const newItemEls = [...taskList.querySelectorAll('.task-item')];
+      newItemEls.forEach(el => {
+        const before = beforeRects.get(el.dataset.id);
+        if (!before) return;
+        const after = el.getBoundingClientRect();
+        const dy    = before.top - after.top;
+
+        if (el.dataset.id === movedId) {
+          // Dropped task: bubble-in from its old slot
+          el.style.animation = 'none';
+          void el.offsetWidth;
+          el.style.animation = 'task-bubble 300ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+        } else if (Math.abs(dy) >= 0.5) {
+          // Neighboring task that shifted: slide to new position
+          el.style.transition = 'none';
+          el.style.transform  = `translateY(${dy}px)`;
+          void el.offsetWidth;
+          el.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
+          el.style.transform  = '';
+          el.addEventListener('transitionend', () => {
+            el.style.transition = '';
+            el.style.transform  = '';
+          }, { once: true });
+        }
+      });
+
+      // Update session storage and save — no re-render needed (already rendered above)
+      const currentTask = (projectData.tasks || []).find(t => !t.completed)?.text ?? null;
+      sessionStorage.setItem('ct_' + projectId, JSON.stringify(currentTask));
+      await saveProject();
     });
   });
 }
