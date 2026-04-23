@@ -1,5 +1,5 @@
 // Electron main process — starts Express server, then opens the app window
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -37,6 +37,39 @@ function createWindow() {
   });
 }
 
+// Check GitHub releases for a newer version and prompt to restart if found.
+// Only runs in the packaged app — skipped entirely during dev (electron .).
+function initAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  const { autoUpdater } = require('electron-updater');
+
+  autoUpdater.autoDownload = true;       // download silently in the background
+  autoUpdater.autoInstallOnAppQuit = true; // also install automatically on next quit
+
+  // When the update has been downloaded, ask the user whether to restart now
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version of Project Dashboard has been downloaded.',
+      detail: 'Restart now to apply the update, or continue and it will install on next close.',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall();
+    });
+  });
+
+  // Log errors silently — don't interrupt the user if update check fails
+  autoUpdater.on('error', (err) => {
+    console.error('[updater] error:', err.message);
+  });
+
+  // Wait 5 seconds after launch before checking so startup feels instant
+  setTimeout(() => autoUpdater.checkForUpdates(), 5000);
+}
+
 app.whenReady().then(() => {
   // Redirect data storage to the OS user-data folder so it is writable
   // when the app is packaged (the install directory is read-only).
@@ -47,6 +80,7 @@ app.whenReady().then(() => {
   const { startServer } = require('./server');
   startServer(() => {
     createWindow();
+    initAutoUpdater();
   });
 
   // macOS: re-open window when clicking the dock icon with no windows open
