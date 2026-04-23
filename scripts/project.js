@@ -1331,10 +1331,11 @@ function renderTimeline() {
     return;
   }
 
-  // ── Cache date range ──────────────────────────────────────────────────────────
+  // ── Cache date range — always include today so the today line stays visible ──
 
-  tlMinDate = datedItems[0].date;
-  tlMaxDate = datedItems[datedItems.length - 1].date;
+  const todayAnchor = new Date(); todayAnchor.setHours(0, 0, 0, 0);
+  tlMinDate = new Date(Math.min(datedItems[0].date.getTime(), todayAnchor.getTime()));
+  tlMaxDate = new Date(Math.max(datedItems[datedItems.length - 1].date.getTime(), todayAnchor.getTime()));
   tlRange   = tlMaxDate - tlMinDate;
 
   // Convert a Date to a percentage position within the current viewport
