@@ -74,6 +74,14 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.5.5</div>
+          <ul class="update-log-list">
+            <li>Fixed "Port 3000 is already in use" error on launch — the app now picks a free port automatically so stray dev servers or leftover Node processes can't block it</li>
+            <li>Launching the app while it's already running now focuses the existing window instead of showing an error</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.5.4</div>
           <ul class="update-log-list">
             <li>GitHub Actions builds now succeed end-to-end — Windows and Mac installers build automatically when a new version tag is pushed</li>

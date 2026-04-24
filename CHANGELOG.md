@@ -3,6 +3,12 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.5 — Port Collision Fix & Single-Instance Lock
+
+- **No more "Port 3000 is already in use" errors on launch:** The installed app now starts its internal server on an OS-assigned free port instead of hardcoded 3000 — stray dev servers, orphaned Node processes, or any other tool holding :3000 can no longer prevent the app from opening
+- **Single-instance lock:** Launching the app while it is already running now focuses the existing window instead of spawning a second instance that would collide on the port
+- **Dev workflow unchanged:** Running `node server.js` directly still uses port 3000 so you can hit the API from a browser during development
+
 ## v1.5.4 — CI/CD Build Pipeline Fixes
 
 - **GitHub Actions builds now succeed:** Switched from a custom `GH_TOKEN` secret (which required manual setup) to the auto-provided `GITHUB_TOKEN`, so the Windows and Mac build jobs no longer fail on tag pushes
