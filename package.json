@@ -55,7 +55,7 @@
     "publish": {
       "provider": "github",
       "owner": "dsung55",
-      "repo": "Project-Tracker"
+      "repo": "Project-Dashboard"
     }
   }
 }
