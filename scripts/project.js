@@ -1261,7 +1261,12 @@ function openTimeline() {
   tlViewStart = 0;
   tlViewEnd   = 1;
   overlay.style.display = 'flex';
-  renderTimeline();
+  // Reset any residual scroll so today always opens at the visual center
+  const wrap = overlay.querySelector('.timeline-scroll-wrap');
+  if (wrap) { wrap.scrollLeft = 0; wrap.scrollTop = 0; }
+  // Two rAFs: first lets the browser process display:flex, second ensures layout
+  // dimensions (clientWidth/clientHeight) are fully settled — needed in Electron
+  requestAnimationFrame(() => requestAnimationFrame(renderTimeline));
 }
 
 // Close the timeline modal
@@ -1365,29 +1370,28 @@ function renderTimeline() {
     return;
   }
 
-  // ── Cache date range — always include today, and pad so the today line never sits on the very edge ──
-  // The visible range is [taskMin, taskMax] plus today; if today is outside or at an edge, we extend
-  // the opposite side so today appears comfortably in view (~20–50% from its nearest edge) rather than
-  // being glued to 0% or 100%.
+  // ── Cache date range — today is always at the exact center of the range so it
+  //    appears in the middle of the timeline on first open regardless of task spread.
+  //    We compute how far the task range extends on each side of today, then take
+  //    the larger half and mirror it, giving a symmetric span around today.
 
-  const ONE_DAY      = 86400000;
-  const todayAnchor  = new Date(); todayAnchor.setHours(0, 0, 0, 0);
-  const todayT       = todayAnchor.getTime();
-  const firstTaskT   = datedItems[0].date.getTime();
-  const lastTaskT    = datedItems[datedItems.length - 1].date.getTime();
+  const ONE_DAY     = 86400000;
+  const todayAnchor = new Date(); todayAnchor.setHours(0, 0, 0, 0);
+  const todayT      = todayAnchor.getTime();
+  const firstTaskT  = datedItems[0].date.getTime();
+  const lastTaskT   = datedItems[datedItems.length - 1].date.getTime();
 
-  let minT = Math.min(firstTaskT, todayT);
-  let maxT = Math.max(lastTaskT,  todayT);
+  // Padding: at least 2 weeks, or 40% of the task span — whichever is larger
+  const taskSpan  = Math.max(ONE_DAY, lastTaskT - firstTaskT);
+  const edgePad   = Math.max(14 * ONE_DAY, taskSpan * 0.4);
 
-  // Edge padding: at least 2 weeks, or 40% of the task span — whichever is larger
-  const taskSpan = Math.max(ONE_DAY, lastTaskT - firstTaskT);
-  const edgePad  = Math.max(14 * ONE_DAY, taskSpan * 0.4);
+  // Each side = distance from today to the nearest task edge, plus padding
+  const leftSpan  = Math.max(todayT - firstTaskT, 0) + edgePad;
+  const rightSpan = Math.max(lastTaskT - todayT,  0) + edgePad;
+  const halfSpan  = Math.max(leftSpan, rightSpan); // mirror to keep today centered
 
-  if (todayT <= firstTaskT) minT = Math.min(minT, todayT - edgePad); // today sits on/left of tasks → extend left
-  if (todayT >= lastTaskT)  maxT = Math.max(maxT, todayT + edgePad); // today sits on/right of tasks → extend right
-
-  tlMinDate = new Date(minT);
-  tlMaxDate = new Date(maxT);
+  tlMinDate = new Date(todayT - halfSpan);
+  tlMaxDate = new Date(todayT + halfSpan);
   tlRange   = tlMaxDate - tlMinDate;
 
   // Convert a Date to a percentage position within the current viewport
