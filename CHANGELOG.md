@@ -3,6 +3,10 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.7 — Timeline Centering Fix (Electron)
+
+- **Fixed: Timeline "Today" opens off-center in the installed app:** Two bugs caused today's marker to appear shifted on first open in the packaged Electron version. The scroll position of the timeline container is now reset every time the timeline opens, and layout dimensions are measured after two animation frames (instead of one) so Electron's layout engine has fully settled before the timeline renders.
+
 ## v1.5.6 — Sub-Task Calendar, Timeline Fix & Dark Mode Inputs
 
 - **Sub-task calendar picker:** Sub-tasks now use the same calendar date picker as main tasks — both when adding a new sub-task and when editing an existing one. No more manual MM/DD/YYYY typing.
