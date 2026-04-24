@@ -11,6 +11,9 @@ on:
     tags:
       - 'v*'          # runs on v1.0.0, v1.5.3, etc.
 
+permissions:
+  contents: write     # required to create/update GitHub Releases
+
 jobs:
   build-windows:
     name: Windows (.exe installer)
@@ -23,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -51,7 +54,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -75,6 +78,9 @@ jobs:
     name: Attach to GitHub Release
     needs: [build-windows, build-mac]
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # repeated here so the job-level scope is explicit
 
     steps:
       - name: Download Windows artifact
