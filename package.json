@@ -1,13 +1,13 @@
 {
   "name": "project-dashboard",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Local project management dashboard",
   "main": "electron.js",
   "scripts": {
     "start": "node server.js",
     "electron": "electron .",
-    "dist": "electron-builder --win",
-    "dist:mac": "electron-builder --mac",
+    "dist": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
     "release": "electron-builder --publish always"
   },
   "dependencies": {
@@ -37,9 +37,10 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        { "target": "dmg", "arch": ["universal"] }
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "Project Dashboard (Mac).${ext}"
     },
     "dmg": {
       "title": "Project Dashboard",

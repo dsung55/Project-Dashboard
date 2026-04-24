@@ -1,8 +1,7 @@
 # Builds and publishes installers for Windows and Mac on every version tag push.
-# Trigger: push a tag like v1.5.3 → workflow runs → artifacts attached to a GitHub Release.
+# Trigger: push a tag like v1.5.3 -> workflow runs -> artifacts attached to a GitHub Release.
 #
-# Required secret (set in repo Settings → Secrets → Actions):
-#   GH_TOKEN  — a GitHub personal access token with repo scope (write releases)
+# Uses the auto-provided GITHUB_TOKEN (no manual secret setup required).
 
 name: Build & Release
 
@@ -33,18 +32,19 @@ jobs:
         run: npm ci
 
       - name: Build Windows installer
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: npm run dist
 
-      - name: Upload Windows artifact
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: dist/*.exe
+          name: windows-build
+          # Include the .exe AND latest.yml so electron-updater can find updates.
+          path: |
+            dist/*.exe
+            dist/latest.yml
 
   build-mac:
-    name: macOS (.dmg — Intel + Apple Silicon)
+    name: macOS (.dmg - Universal)
     runs-on: macos-latest
 
     steps:
@@ -62,17 +62,19 @@ jobs:
 
       - name: Build macOS disk image
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           # Code signing is skipped (no Apple Developer cert).
-          # Users will need to right-click → Open the first time they launch.
+          # Users will need to right-click -> Open the first time they launch.
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npm run dist:mac
 
-      - name: Upload macOS artifact
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mac-dmg
-          path: dist/*.dmg
+          name: mac-build
+          # Include the .dmg AND latest-mac.yml so electron-updater can find updates.
+          path: |
+            dist/*.dmg
+            dist/latest-mac.yml
 
   publish:
     name: Attach to GitHub Release
@@ -83,28 +85,25 @@ jobs:
       contents: write   # repeated here so the job-level scope is explicit
 
     steps:
-      - name: Download Windows artifact
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows-installer
+          name: windows-build
           path: artifacts/
 
-      - name: Download macOS artifact
+      - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          name: mac-dmg
+          name: mac-build
           path: artifacts/
-
-      - name: Rename artifacts to friendly display names
-        run: |
-          cd artifacts
-          find . -name "*arm64*.dmg" -exec mv {} "Project Dashboard (Mac - Apple Silicon).dmg" \;
-          find . -name "*.dmg" ! -name "*Apple Silicon*" -exec mv {} "Project Dashboard (Mac - Intel).dmg" \;
 
       - name: Create/update GitHub Release and attach files
         uses: softprops/action-gh-release@v2
         with:
+          # Uploads .exe, .dmg, latest.yml, latest-mac.yml.
+          # The two YAMLs are what electron-updater reads to detect new versions.
           files: artifacts/**/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Auto-provided by GitHub Actions; no manual secret setup needed.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

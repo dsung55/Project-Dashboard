@@ -3,6 +3,14 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.4 — CI/CD Build Pipeline Fixes
+
+- **GitHub Actions builds now succeed:** Switched from a custom `GH_TOKEN` secret (which required manual setup) to the auto-provided `GITHUB_TOKEN`, so the Windows and Mac build jobs no longer fail on tag pushes
+- **Single Mac universal binary:** The Mac release now ships one `Project Dashboard (Mac).dmg` file that runs natively on both Intel and Apple Silicon, instead of two separate arch-specific downloads
+- **Cleaner release file names:** Downloads on the GitHub release page are now labeled exactly `Project Dashboard (Windows).exe` and `Project Dashboard (Mac).dmg`
+- **Auto-update channel files included in releases:** `latest.yml` and `latest-mac.yml` are now uploaded alongside the installers, which is what electron-updater needs to detect new versions inside the running app
+- **`dist/` added to .gitignore:** Build output no longer shows up as untracked changes after running a local build
+
 ## v1.5.3 — FLIP Animations & Delete Confirmation
 
 - **FLIP task reorder animation:** Tasks animate smoothly into their new positions when dragged to reorder — each row slides from where it was to where it ends up instead of snapping instantly
