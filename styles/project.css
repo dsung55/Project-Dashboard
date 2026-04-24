@@ -164,6 +164,8 @@
   border-radius: 8px;
   font-family:   var(--font);
   font-size:     15px;
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
   outline:       none;
   transition:    border-color var(--transition), box-shadow var(--transition);
 }
@@ -429,35 +431,6 @@
   min-width:     0;
 }
 
-/* Date input group shown during sub-item edit mode */
-.sub-date-group {
-  display:     flex;
-  align-items: center;
-  gap:         2px;
-  flex-shrink: 0;
-}
-
-.sub-due-input {
-  width:         38px;
-  font-size:     0.75rem;
-  padding:       2px 3px;
-  border:        1px solid var(--border-color);
-  border-radius: 4px;
-  background:    var(--bg-primary);
-  color:         var(--text-primary);
-  text-align:    center;
-  font-family:   var(--font);
-  outline:       none;
-  transition:    border-color var(--transition);
-}
-
-.sub-due-input:focus {
-  border-color: var(--blue);
-  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
-}
-
-.sub-due-year { width: 50px; }
-
 .btn-sub-delete {
   background:    transparent;
   border:        none;
@@ -498,6 +471,7 @@
   display:       flex;
   gap:           6px;
   margin-bottom: 4px;
+  align-items:   center;
 }
 
 /* "Add" button inside the sub-item row */
@@ -513,38 +487,12 @@
   border-radius: 6px;
   font-family:   var(--font);
   font-size:     13px;
+  color:         var(--text-primary);
   outline:       none;
   background:    var(--bg-primary);
 }
 
 .sub-item-add-input:focus {
-  border-color: var(--blue);
-  box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
-}
-
-.sub-add-date-group {
-  display:     flex;
-  align-items: center;
-  gap:         2px;
-  flex-shrink: 0;
-}
-
-.sub-add-date-input {
-  width:         28px;
-  padding:       3px 4px;
-  border:        1px solid var(--border-color);
-  border-radius: 4px;
-  font-size:     12px;
-  font-family:   inherit;
-  text-align:    center;
-  background:    var(--bg-primary);
-  color:         var(--text-primary);
-  outline:       none;
-}
-
-.sub-add-date-input.sub-add-year { width: 44px; }
-
-.sub-add-date-input:focus {
   border-color: var(--blue);
   box-shadow:   0 0 0 2px rgba(0,122,255,0.12);
 }
@@ -565,6 +513,7 @@
   border-radius: 8px;
   font-family:   var(--font);
   font-size:     13px;
+  color:         var(--text-primary);
   resize:        vertical;
   min-height:    64px;
   outline:       none;
@@ -837,6 +786,42 @@
 }
 
 .dcal-popup.open { display: block; }
+
+/* Floating variant — positioned in viewport coords by JS (top/left) so the popup escapes any
+   overflow-hidden ancestor (e.g. the expanded task panel). */
+.dcal-popup.dcal-popup-floating {
+  position: fixed;
+  top:      0;
+  left:     0;
+  right:    auto;
+}
+
+/* Compact calendar trigger used inside the sub-item rows */
+.btn-cal-trigger.btn-cal-trigger-sm {
+  padding:   3px 7px;
+  font-size: 11px;
+  gap:       4px;
+  height:    auto;
+  line-height: 1;
+}
+
+.btn-cal-trigger.btn-cal-trigger-sm svg {
+  width:  12px;
+  height: 12px;
+}
+
+.btn-cal-trigger.btn-cal-trigger-sm .cal-date-badge {
+  font-size: 11px;
+}
+
+/* Wrapper for the calendar trigger in the sub-item add row — keeps the popup anchored */
+.sub-add-cal-wrap,
+.sub-edit-cal-wrap {
+  position:    relative;
+  flex-shrink: 0;
+  display:     inline-flex;
+  align-items: center;
+}
 
 /* Header row: ‹ Month▾ Year▾ › */
 .dcal-header {

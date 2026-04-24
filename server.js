@@ -547,9 +547,17 @@ function startServer(port, callback) {
   });
 }
 
-// When run directly with `node server.js`, start on the fixed dev port
+// When run directly with `node server.js`, try the preferred port then fall back to any free port
 if (require.main === module) {
-  startServer(PORT);
+  const net = require('net');
+  const tester = net.createServer();
+  tester.once('error', () => {
+    tester.close(() => startServer(0));
+  });
+  tester.once('listening', () => {
+    tester.close(() => startServer(PORT));
+  });
+  tester.listen(PORT);
 }
 
 module.exports = { startServer };

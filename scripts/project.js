@@ -268,6 +268,10 @@ function renderHeader() {
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
+// Per-task calendar picker APIs created in wireSubItemEvents — destroyed on each re-render
+// so their document-level outside-click listeners don't accumulate.
+let activeSubCalendars = [];
+
 // Re-render only the task list (called after every task mutation)
 function renderTasks() {
   const tasks     = projectData.tasks || [];
@@ -277,6 +281,11 @@ function renderTasks() {
 
   const list = document.getElementById('task-list');
   if (!list) return;
+
+  // Tear down sub-item calendar pickers from the previous render before dropping their DOM
+  activeSubCalendars.forEach(api => api?.destroy());
+  activeSubCalendars = [];
+
   list.innerHTML = '';
 
   // Active tasks — first item is the "current task" (bolded); active tasks are draggable
@@ -351,12 +360,13 @@ function buildTaskItem(task, isCurrent = false, isDraggable = false) {
       <div class="task-panel-inner">
         <div class="sub-item-add-row">
           <input class="sub-item-add-input" placeholder="Enter sub-item…">
-          <div class="sub-add-date-group">
-            <input class="sub-add-date-input" data-field="month" placeholder="MM" maxlength="2">
-            <span class="task-due-sep">/</span>
-            <input class="sub-add-date-input" data-field="day" placeholder="DD" maxlength="2">
-            <span class="task-due-sep">/</span>
-            <input class="sub-add-date-input sub-add-year" data-field="year" placeholder="YYYY" maxlength="4">
+          <div class="sub-add-cal-wrap">
+            <button class="btn-cal-trigger btn-cal-trigger-sm sub-add-cal-trigger" type="button" title="Set due date">
+              ${buildCalendarTriggerInnerHTML()}
+            </button>
+            <div class="dcal-popup dcal-popup-floating sub-add-cal-popup">
+              ${buildCalendarPopupInnerHTML()}
+            </div>
           </div>
           <button class="btn btn-secondary btn-sub-add">Add</button>
         </div>
@@ -499,34 +509,42 @@ function wireSubItemEvents(item, task) {
   });
 
   // Sub-item add on Enter or button click — panel stays open
-  const subInput    = item.querySelector('.sub-item-add-input');
-  const addSubBtn   = item.querySelector('.sub-item-add-row .btn');
-  const addMonthIn  = item.querySelector('.sub-add-date-input[data-field="month"]');
-  const addDayIn    = item.querySelector('.sub-add-date-input[data-field="day"]');
-  const addYearIn   = item.querySelector('.sub-add-date-input[data-field="year"]');
+  const subInput  = item.querySelector('.sub-item-add-input');
+  const addSubBtn = item.querySelector('.btn-sub-add');
+  const calTrig   = item.querySelector('.sub-add-cal-trigger');
+  const calPopup  = item.querySelector('.sub-add-cal-popup');
+
+  // Calendar picker stores the currently-chosen date for the next sub-item add.
+  // preventDefault on the trigger's mousedown keeps the text input focused so the user
+  // can pick a date and continue typing without re-clicking the input.
+  calTrig?.addEventListener('mousedown', e => e.preventDefault());
+  let pendingSubDate = null;
+  const subCalApi = makeCalendarPicker(calTrig, calPopup, {
+    floating: true,
+    onChange(date) {
+      pendingSubDate = date;
+      subInput.focus();
+    }
+  });
+  if (subCalApi) activeSubCalendars.push(subCalApi);
+
   const addSub = () => {
     const text = subInput.value.trim();
     if (!text) return;
-    const month = addMonthIn?.value.trim() || '';
-    const day   = addDayIn?.value.trim()   || '';
-    const year  = addYearIn?.value.trim()  || '';
-    const dueDate = (month || day || year) ? { month, day, year } : null;
     expandedTaskId = task.id;
-    addSubItem(task.id, text, dueDate);
+    addSubItem(task.id, text, pendingSubDate);
+    // Reset the input + calendar for the next entry
     subInput.value = '';
-    if (addMonthIn) addMonthIn.value = '';
-    if (addDayIn)   addDayIn.value   = '';
-    if (addYearIn)  addYearIn.value  = '';
+    pendingSubDate = null;
+    subCalApi?.reset();
   };
+
   subInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } });
   subInput.addEventListener('click', e => e.stopPropagation());
   addSubBtn.addEventListener('click', (e) => { e.stopPropagation(); addSub(); });
-  // Wire numeric validation on the add-row date inputs
-  item.querySelectorAll('.sub-add-date-input').forEach(input => {
-    wireDateInput(input);
-    input.addEventListener('click', e => e.stopPropagation());
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } });
-  });
+  // Prevent clicks inside the calendar trigger/popup from bubbling up and collapsing the task panel
+  calTrig?.addEventListener('click', e => e.stopPropagation());
+  calPopup?.addEventListener('click', e => e.stopPropagation());
 
   // Sub-item drag to reorder
   initSubItemDrag(item, task);
@@ -541,25 +559,42 @@ function enterSubItemEdit(rowEl, task, sub) {
   textInput.value     = sub.text;
   textSpan.replaceWith(textInput);
 
-  // Replace the due badge (if any) with editable date inputs, or insert them fresh
+  // Replace the due badge (if any) with a calendar trigger + floating popup
   const existingBadge = rowEl.querySelector('.sub-due-badge');
-  const dateGroup = document.createElement('div');
-  dateGroup.className = 'sub-date-group';
-  dateGroup.innerHTML = `
-    <input class="sub-due-input" data-field="month" placeholder="MM" maxlength="2" value="${escapeHtml(sub.dueDate?.month || '')}">
-    <span class="task-due-sep">/</span>
-    <input class="sub-due-input" data-field="day" placeholder="DD" maxlength="2" value="${escapeHtml(sub.dueDate?.day || '')}">
-    <span class="task-due-sep">/</span>
-    <input class="sub-due-input sub-due-year" data-field="year" placeholder="YYYY" maxlength="4" value="${escapeHtml(sub.dueDate?.year || '')}">
+  const calWrap = document.createElement('div');
+  calWrap.className = 'sub-edit-cal-wrap';
+  calWrap.innerHTML = `
+    <button class="btn-cal-trigger btn-cal-trigger-sm" type="button" title="Set due date">
+      ${buildCalendarTriggerInnerHTML()}
+    </button>
+    <div class="dcal-popup dcal-popup-floating">
+      ${buildCalendarPopupInnerHTML()}
+    </div>
   `;
   if (existingBadge) {
-    existingBadge.replaceWith(dateGroup);
+    existingBadge.replaceWith(calWrap);
   } else {
-    rowEl.querySelector('.btn-sub-delete').before(dateGroup);
+    rowEl.querySelector('.btn-sub-delete').before(calWrap);
   }
 
-  // Apply numeric-only validation to the new date inputs
-  dateGroup.querySelectorAll('.sub-due-input').forEach(wireDateInput);
+  const triggerBtn = calWrap.querySelector('.btn-cal-trigger');
+  const popupEl    = calWrap.querySelector('.dcal-popup');
+
+  // Keep focus on the text input when the trigger is clicked — otherwise textInput would blur
+  // and the auto-commit timer would race against the user's calendar interaction.
+  triggerBtn?.addEventListener('mousedown', (e) => e.preventDefault());
+
+  // Track the edited date locally; updated on every pick/clear so commit() reads the latest
+  let editedDate = sub.dueDate || null;
+  const calApi = makeCalendarPicker(triggerBtn, popupEl, {
+    floating:    true,
+    initialDate: sub.dueDate,
+    onChange(date) {
+      editedDate = date;
+      // Return focus to the text input so any pending blur timer is cleared
+      textInput.focus();
+    }
+  });
 
   textInput.focus();
   textInput.select();
@@ -568,35 +603,34 @@ function enterSubItemEdit(rowEl, task, sub) {
   let committed = false;
   const commit = async () => {
     if (committed) return;
+    // If the calendar is still open, skip this tick — the user is mid-interaction
+    if (popupEl?.classList.contains('open')) return;
     committed = true;
+    calApi?.destroy();
     const newText = textInput.value.trim();
     if (!newText) { expandedTaskId = task.id; await saveAndRender(); return; }
-    const month = dateGroup.querySelector('[data-field="month"]').value.trim();
-    const day   = dateGroup.querySelector('[data-field="day"]').value.trim();
-    const year  = dateGroup.querySelector('[data-field="year"]').value.trim();
     pushUndo();
-    const t   = projectData.tasks.find(t => t.id === task.id);
-    const s   = (t?.subItems || []).find(s => s.id === sub.id);
+    const t = projectData.tasks.find(t => t.id === task.id);
+    const s = (t?.subItems || []).find(s => s.id === sub.id);
     if (s) {
       s.text    = newText;
-      s.dueDate = (month || day || year) ? { month, day, year } : null;
+      s.dueDate = editedDate;
     }
     expandedTaskId = task.id;
     await saveAndRender();
   };
 
-  // Use a short blur timer so focus can move freely between text and date inputs
+  // Commit on blur (brief delay to allow focus to settle), on Enter, or on outside click.
+  // Cancel on Escape.
   let blurTimer = null;
-  const allInputs = [textInput, ...dateGroup.querySelectorAll('input')];
-  allInputs.forEach(inp => {
-    inp.addEventListener('blur',  () => { blurTimer = setTimeout(commit, 200); });
-    inp.addEventListener('focus', () => { clearTimeout(blurTimer); });
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter')  { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') { committed = true; expandedTaskId = task.id; saveAndRender(); }
-    });
-    inp.addEventListener('click', e => e.stopPropagation());
+  textInput.addEventListener('blur',  () => { blurTimer = setTimeout(commit, 200); });
+  textInput.addEventListener('focus', () => { clearTimeout(blurTimer); });
+  textInput.addEventListener('click', e => e.stopPropagation());
+  textInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { committed = true; calApi?.destroy(); expandedTaskId = task.id; saveAndRender(); }
   });
+  calWrap.addEventListener('click', e => e.stopPropagation());
 }
 
 // ── Task drag-to-reorder ──────────────────────────────────────────────────────
@@ -1331,11 +1365,29 @@ function renderTimeline() {
     return;
   }
 
-  // ── Cache date range — always include today so the today line stays visible ──
+  // ── Cache date range — always include today, and pad so the today line never sits on the very edge ──
+  // The visible range is [taskMin, taskMax] plus today; if today is outside or at an edge, we extend
+  // the opposite side so today appears comfortably in view (~20–50% from its nearest edge) rather than
+  // being glued to 0% or 100%.
 
-  const todayAnchor = new Date(); todayAnchor.setHours(0, 0, 0, 0);
-  tlMinDate = new Date(Math.min(datedItems[0].date.getTime(), todayAnchor.getTime()));
-  tlMaxDate = new Date(Math.max(datedItems[datedItems.length - 1].date.getTime(), todayAnchor.getTime()));
+  const ONE_DAY      = 86400000;
+  const todayAnchor  = new Date(); todayAnchor.setHours(0, 0, 0, 0);
+  const todayT       = todayAnchor.getTime();
+  const firstTaskT   = datedItems[0].date.getTime();
+  const lastTaskT    = datedItems[datedItems.length - 1].date.getTime();
+
+  let minT = Math.min(firstTaskT, todayT);
+  let maxT = Math.max(lastTaskT,  todayT);
+
+  // Edge padding: at least 2 weeks, or 40% of the task span — whichever is larger
+  const taskSpan = Math.max(ONE_DAY, lastTaskT - firstTaskT);
+  const edgePad  = Math.max(14 * ONE_DAY, taskSpan * 0.4);
+
+  if (todayT <= firstTaskT) minT = Math.min(minT, todayT - edgePad); // today sits on/left of tasks → extend left
+  if (todayT >= lastTaskT)  maxT = Math.max(maxT, todayT + edgePad); // today sits on/right of tasks → extend right
+
+  tlMinDate = new Date(minT);
+  tlMaxDate = new Date(maxT);
   tlRange   = tlMaxDate - tlMinDate;
 
   // Convert a Date to a percentage position within the current viewport
@@ -1783,62 +1835,122 @@ function buildUndatedSection(undatedItems) {
   return section;
 }
 
-// ── Mini date-picker calendar (add-task row) ──────────────────────────────────
+// ── Mini date-picker calendar — reusable across add-task row, sub-item add, sub-item edit ────
 
-function initTaskCalendar() {
-  const trigger  = document.getElementById('btn-cal-trigger');
-  const popup    = document.getElementById('dcal-popup');
-  const daysEl   = document.getElementById('dcal-days');
-  const monthSel = document.getElementById('dcal-month-sel');
-  const yearSel  = document.getElementById('dcal-year-sel');
-  const prevBtn  = document.getElementById('dcal-prev');
-  const nextBtn  = document.getElementById('dcal-next');
-  const clearBtn = document.getElementById('dcal-clear-btn');
-  const badge    = document.getElementById('cal-date-badge');
+// Inner HTML for a calendar popup (caller creates the wrapper <div class="dcal-popup">).
+function buildCalendarPopupInnerHTML() {
+  return `
+    <div class="dcal-header">
+      <button class="dcal-nav-btn dcal-prev" type="button">&#8249;</button>
+      <div class="dcal-header-selects">
+        <select class="dcal-month-sel"></select>
+        <select class="dcal-year-sel"></select>
+      </div>
+      <button class="dcal-nav-btn dcal-next" type="button">&#8250;</button>
+    </div>
+    <div class="dcal-weekdays">
+      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+    </div>
+    <div class="dcal-days"></div>
+    <div class="dcal-footer">
+      <button class="dcal-clear-btn" type="button">Clear</button>
+    </div>
+  `;
+}
 
-  if (!trigger || !popup) return;
+// HTML for a calendar trigger button (icon + selected-date badge).
+function buildCalendarTriggerInnerHTML() {
+  return `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+      <path d="M16 2v4M8 2v4M3 10h18"></path>
+    </svg>
+    <span class="cal-date-badge"></span>
+  `;
+}
+
+// Wire a calendar picker to a (trigger, popup) pair.
+// opts: {
+//   initialDate: {month, day, year} | null,
+//   onChange:    (date | null) => void,   // fires on pick / clear
+//   floating:    boolean                  // true = position popup with fixed coords (for popups inside overflow-hidden containers)
+// }
+// Returns: { setDate(date), reset(), destroy() }
+function makeCalendarPicker(trigger, popup, opts = {}) {
+  if (!trigger || !popup) return null;
+
+  const daysEl   = popup.querySelector('.dcal-days');
+  const monthSel = popup.querySelector('.dcal-month-sel');
+  const yearSel  = popup.querySelector('.dcal-year-sel');
+  const prevBtn  = popup.querySelector('.dcal-prev');
+  const nextBtn  = popup.querySelector('.dcal-next');
+  const clearBtn = popup.querySelector('.dcal-clear-btn');
+  const badge    = trigger.querySelector('.cal-date-badge');
+
+  if (!daysEl || !monthSel || !yearSel) return null;
 
   const MONTHS = ['January','February','March','April','May','June',
                   'July','August','September','October','November','December'];
 
-  const today  = new Date();
-  let curYear  = today.getFullYear();
-  let curMonth = today.getMonth(); // 0-based
-  let selYear  = null;
-  let selMonth = null; // 0-based
-  let selDay   = null;
+  const today = new Date();
+  let curYear, curMonth;       // currently-viewed month in the grid (0-based)
+  let selYear, selMonth, selDay = null; // selected date (selMonth 0-based)
 
-  // Populate month dropdown
-  MONTHS.forEach((name, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = name;
-    monthSel.appendChild(opt);
-  });
-
-  // Populate year dropdown (last year through 6 years out)
-  for (let y = today.getFullYear() - 1; y <= today.getFullYear() + 6; y++) {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
+  // Populate dropdowns once per popup
+  if (monthSel.children.length === 0) {
+    MONTHS.forEach((name, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = name;
+      monthSel.appendChild(opt);
+    });
+  }
+  if (yearSel.children.length === 0) {
+    for (let y = today.getFullYear() - 1; y <= today.getFullYear() + 6; y++) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
   }
 
-  // Sync select elements to current viewed month/year
+  // Load a saved date (or reset) into internal state
+  function applyInitial(d) {
+    const hasDate = d && d.month && d.day && d.year;
+    if (hasDate) {
+      selYear  = parseInt(d.year, 10);
+      selMonth = parseInt(d.month, 10) - 1;
+      selDay   = parseInt(d.day, 10);
+      curYear  = selYear;
+      curMonth = selMonth;
+    } else {
+      selYear = selMonth = selDay = null;
+      curYear  = today.getFullYear();
+      curMonth = today.getMonth();
+    }
+  }
+  applyInitial(opts.initialDate);
+
+  // Return the current selection as a stored-format {month, day, year} string-object, or null
+  function currentDate() {
+    if (selDay === null) return null;
+    return { month: String(selMonth + 1), day: String(selDay), year: String(selYear) };
+  }
+
   function syncSelects() {
     monthSel.value = curMonth;
     yearSel.value  = curYear;
   }
 
-  // Rebuild the day-grid for the currently viewed month
+  // Render the day-grid for the currently-viewed month
   function renderDays() {
     syncSelects();
     daysEl.innerHTML = '';
 
-    const firstWeekday = new Date(curYear, curMonth, 1).getDay(); // 0=Sun
+    const firstWeekday = new Date(curYear, curMonth, 1).getDay();
     const daysInMonth  = new Date(curYear, curMonth + 1, 0).getDate();
 
-    // Empty offset cells before the first day of the month
+    // Empty offset cells before day 1
     for (let i = 0; i < firstWeekday; i++) {
       const cell = document.createElement('button');
       cell.className = 'dcal-day empty';
@@ -1846,7 +1958,6 @@ function initTaskCalendar() {
       daysEl.appendChild(cell);
     }
 
-    // One button per calendar day
     for (let d = 1; d <= daysInMonth; d++) {
       const cell = document.createElement('button');
       cell.className = 'dcal-day';
@@ -1861,12 +1972,13 @@ function initTaskCalendar() {
       const isSel = selDay === d && selMonth === curMonth && selYear === curYear;
       if (isSel) cell.classList.add('selected');
 
-      cell.addEventListener('click', () => {
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
         selDay   = d;
         selMonth = curMonth;
         selYear  = curYear;
-        syncHiddenInputs();
         updateBadge();
+        opts.onChange?.(currentDate());
         closePopup();
       });
 
@@ -1874,18 +1986,9 @@ function initTaskCalendar() {
     }
   }
 
-  // Write the selected date into the hidden inputs that submitAdd reads
-  function syncHiddenInputs() {
-    const mEl = document.getElementById('add-month');
-    const dEl = document.getElementById('add-day');
-    const yEl = document.getElementById('add-year');
-    if (mEl) mEl.value = selDay !== null ? String(selMonth + 1) : '';
-    if (dEl) dEl.value = selDay !== null ? String(selDay)       : '';
-    if (yEl) yEl.value = selDay !== null ? String(selYear)      : '';
-  }
-
-  // Show or clear the date badge on the trigger button
+  // Update the date text on the trigger button
   function updateBadge() {
+    if (!badge) return;
     if (selDay !== null) {
       badge.textContent = MONTHS[selMonth].slice(0, 3) + ' ' + selDay;
       trigger.classList.add('has-date');
@@ -1894,54 +1997,101 @@ function initTaskCalendar() {
       trigger.classList.remove('has-date');
     }
   }
+  updateBadge();
 
-  function openPopup()  { popup.classList.add('open');    renderDays(); }
+  // When the popup is floating (position: fixed), recompute coords each open so it tracks scroll
+  function positionFloatingPopup() {
+    if (!opts.floating) return;
+    const rect        = trigger.getBoundingClientRect();
+    const popupWidth  = 252; // matches CSS width
+    const popupHeight = 320; // approximate rendered height
+    let top  = rect.bottom + 6;
+    let left = rect.right - popupWidth;
+    // Flip above the trigger if there's not enough room below
+    if (top + popupHeight > window.innerHeight - 8) top = rect.top - popupHeight - 6;
+    // Keep the popup on-screen horizontally
+    left = Math.max(8, Math.min(left, window.innerWidth - popupWidth - 8));
+    popup.style.top  = top  + 'px';
+    popup.style.left = left + 'px';
+  }
+
+  function openPopup() {
+    positionFloatingPopup();
+    popup.classList.add('open');
+    renderDays();
+  }
   function closePopup() { popup.classList.remove('open'); }
 
-  // Toggle popup on trigger click
-  trigger.addEventListener('click', (e) => {
+  // Trigger toggles the popup
+  const triggerHandler = (e) => {
     e.stopPropagation();
     popup.classList.contains('open') ? closePopup() : openPopup();
-  });
+  };
+  trigger.addEventListener('click', triggerHandler);
 
-  // Previous month
-  prevBtn.addEventListener('click', (e) => {
+  prevBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (--curMonth < 0) { curMonth = 11; curYear--; }
     renderDays();
   });
-
-  // Next month
-  nextBtn.addEventListener('click', (e) => {
+  nextBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (++curMonth > 11) { curMonth = 0; curYear++; }
     renderDays();
   });
-
   monthSel.addEventListener('change', (e) => { curMonth = parseInt(e.target.value); renderDays(); });
-  yearSel.addEventListener('change',  (e) => { curYear  = parseInt(e.target.value); renderDays(); });
+  yearSel .addEventListener('change', (e) => { curYear  = parseInt(e.target.value); renderDays(); });
 
-  // Clear selection
-  clearBtn.addEventListener('click', (e) => {
+  clearBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     selDay = selMonth = selYear = null;
-    syncHiddenInputs();
     updateBadge();
+    opts.onChange?.(null);
     closePopup();
   });
 
-  // Close when clicking anywhere outside the picker
-  document.addEventListener('click', (e) => {
-    const wrap = document.getElementById('btn-cal-trigger')?.closest('.task-add-cal-wrap');
-    if (wrap && !wrap.contains(e.target)) closePopup();
+  // Close when clicking outside the trigger or popup
+  const outsideHandler = (e) => {
+    if (trigger.contains(e.target) || popup.contains(e.target)) return;
+    closePopup();
+  };
+  document.addEventListener('click', outsideHandler);
+
+  return {
+    reset() {
+      applyInitial(null);
+      updateBadge();
+    },
+    setDate(d) {
+      applyInitial(d);
+      updateBadge();
+    },
+    destroy() {
+      document.removeEventListener('click', outsideHandler);
+    }
+  };
+}
+
+// Wire the calendar on the main Add-Task row — writes picked date into the hidden inputs
+// that submitAdd() reads, so the rest of the form flow is unchanged.
+function initTaskCalendar() {
+  const trigger = document.getElementById('btn-cal-trigger');
+  const popup   = document.getElementById('dcal-popup');
+  if (!trigger || !popup) return;
+
+  const api = makeCalendarPicker(trigger, popup, {
+    onChange(date) {
+      const mEl = document.getElementById('add-month');
+      const dEl = document.getElementById('add-day');
+      const yEl = document.getElementById('add-year');
+      if (mEl) mEl.value = date?.month || '';
+      if (dEl) dEl.value = date?.day   || '';
+      if (yEl) yEl.value = date?.year  || '';
+    }
   });
 
-  // Expose reset so submitAdd can clear the picker after adding a task
-  window._resetTaskCalendar = () => {
-    selDay = selMonth = selYear = null;
-    syncHiddenInputs();
-    updateBadge();
-  };
+  // submitAdd uses this to clear the picker after a successful add
+  window._resetTaskCalendar = () => api?.reset();
 }
 
 // ── Task add form ─────────────────────────────────────────────────────────────

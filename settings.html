@@ -74,6 +74,16 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.5.6</div>
+          <ul class="update-log-list">
+            <li>Sub-tasks now have the same calendar date picker as main tasks — click the calendar icon to pick a due date instead of typing MM/DD/YYYY by hand (works both when adding a new sub-task and when editing an existing one)</li>
+            <li>Fixed: the Timeline's "Today" blue line no longer sits against the very left edge when all tasks are in the future — the range is now padded so "Today" appears comfortably in view</li>
+            <li>Fixed: several input fields (new task, sub-task add, task notes) rendered black text on a black background in dark mode — all form fields now honor the active theme's text color</li>
+            <li>Dark mode now tells the browser to render native controls (scrollbars, dropdowns) in dark styling for consistency</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.5.5</div>
           <ul class="update-log-list">
             <li>Fixed "Port 3000 is already in use" error on launch — the app now picks a free port automatically so stray dev servers or leftover Node processes can't block it</li>

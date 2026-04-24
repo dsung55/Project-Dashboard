@@ -3,6 +3,14 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.6 — Sub-Task Calendar, Timeline Fix & Dark Mode Inputs
+
+- **Sub-task calendar picker:** Sub-tasks now use the same calendar date picker as main tasks — both when adding a new sub-task and when editing an existing one. No more manual MM/DD/YYYY typing.
+- **Reusable calendar helper:** `initTaskCalendar` refactored into a generic `makeCalendarPicker(trigger, popup, opts)` so the same code powers the main-task picker and the per-sub-item pickers. Sub-item popups use `position: fixed` so they escape the task panel's `overflow: hidden`.
+- **Timeline "Today" line no longer glues to the edge:** When all tasks are in the future (or all in the past), the today line used to sit at 0% (or 100%) of the track. The visible range is now padded by at least two weeks or 40% of the task span on the side adjacent to today, so today appears comfortably in view.
+- **Dark mode text visibility:** `.task-add-input`, `.sub-item-add-input`, and `.task-notes-input` were missing explicit `color: var(--text-primary)` declarations, so browsers rendered them as black text on the dark theme's dark background. All three now honor the active theme.
+- **Native controls honor dark mode:** Added `color-scheme: dark` to the `[data-theme="dark"]` block so browser-native UI (scrollbars, dropdown menus, date spinners) renders in dark styling.
+
 ## v1.5.5 — Port Collision Fix & Single-Instance Lock
 
 - **No more "Port 3000 is already in use" errors on launch:** The installed app now starts its internal server on an OS-assigned free port instead of hardcoded 3000 — stray dev servers, orphaned Node processes, or any other tool holding :3000 can no longer prevent the app from opening

@@ -29,6 +29,8 @@
   --text-secondary:     #8E8E93;
   --border-color:       #3A3A3C;
   --shadow-hover:       0 4px 16px rgba(0, 0, 0, 0.40);
+  /* Tell native form controls (inputs, selects, dropdowns, scrollbars) to use dark styling */
+  color-scheme:         dark;
 }
 
 /* Dark mode: section cards — slightly lifted surface */
