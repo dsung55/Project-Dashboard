@@ -521,35 +521,35 @@ function migrateDueDates() {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-// Exported so electron.js can call startServer(callback) and open the window
+// Exported so electron.js can call startServer(port, callback) and open the window
 // only after Express is confirmed listening — avoids a race condition on load.
-function startServer(callback) {
+// Pass port 0 to let the OS pick a free port; the callback receives the actual port.
+function startServer(port, callback) {
   bootstrap();
   migrateIndex();
   migrateDueDates();
-  const server = app.listen(PORT, () => {
-    console.log(`Dashboard running at http://localhost:${PORT}`);
-    if (callback) callback();
+  const server = app.listen(port, () => {
+    const actualPort = server.address().port;
+    console.log(`Dashboard running at http://localhost:${actualPort}`);
+    if (callback) callback(actualPort);
   });
 
-  // Port already in use — likely the dev server or another instance is running
+  // Only reachable when a fixed port was requested (e.g. dev via `node server.js`);
+  // Electron uses port 0 so the OS always picks a free port and this never fires.
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      const { dialog, app: electronApp } = require('electron');
-      dialog.showErrorBox(
-        'Port Already In Use',
-        `Port ${PORT} is already occupied.\n\nClose any other instance of Project Dashboard (or the dev server) and try again.`
-      );
-      electronApp.quit();
+      const msg = `Port ${port} is already occupied.\n\nClose any other instance of Project Dashboard (or the dev server) and try again.`;
+      console.error(`\nPort Already In Use\n${msg}`);
+      process.exit(1);
     } else {
       throw err;
     }
   });
 }
 
-// When run directly with `node server.js`, start immediately
+// When run directly with `node server.js`, start on the fixed dev port
 if (require.main === module) {
-  startServer();
+  startServer(PORT);
 }
 
 module.exports = { startServer };
