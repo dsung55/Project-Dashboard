@@ -1,0 +1,98 @@
+# Builds and publishes installers for Windows and Mac on every version tag push.
+# Trigger: push a tag like v1.5.3 → workflow runs → artifacts attached to a GitHub Release.
+#
+# Required secret (set in repo Settings → Secrets → Actions):
+#   GH_TOKEN  — a GitHub personal access token with repo scope (write releases)
+
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # runs on v1.0.0, v1.5.3, etc.
+
+jobs:
+  build-windows:
+    name: Windows (.exe installer)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: npm run dist
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/*.exe
+
+  build-mac:
+    name: macOS (.dmg — Intel + Apple Silicon)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS disk image
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Code signing is skipped (no Apple Developer cert).
+          # Users will need to right-click → Open the first time they launch.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run dist:mac
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg
+          path: dist/*.dmg
+
+  publish:
+    name: Attach to GitHub Release
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: artifacts/
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-dmg
+          path: artifacts/
+
+      - name: Create/update GitHub Release and attach files
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

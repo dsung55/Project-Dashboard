@@ -617,6 +617,101 @@ input[type="color"].form-input {
   to   { opacity: 0; transform: translateY(8px); }
 }
 
+/* ── Auto-update toast ───────────────────────────────────────────────────────── */
+#update-toast {
+  position:      fixed;
+  bottom:        28px;
+  right:         28px;
+  z-index:       10000;
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  background:    var(--text-primary);
+  color:         #FFFFFF;
+  padding:       14px 16px;
+  border-radius: 12px;
+  box-shadow:    0 6px 24px rgba(0,0,0,0.22);
+  max-width:     340px;
+  opacity:       0;
+  transform:     translateY(12px);
+  transition:    opacity 220ms ease, transform 220ms ease;
+  pointer-events: auto;
+}
+#update-toast.update-toast-visible {
+  opacity:   1;
+  transform: translateY(0);
+}
+.update-toast-body {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+  flex:        1;
+  min-width:   0;
+}
+.update-toast-icon {
+  font-size:        16px;
+  width:            28px;
+  height:           28px;
+  border-radius:    50%;
+  background:       rgba(255,255,255,0.15);
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  flex-shrink:      0;
+}
+.update-toast-text {
+  display:        flex;
+  flex-direction: column;
+  gap:            2px;
+  min-width:      0;
+}
+.update-toast-text strong {
+  font-size:   13px;
+  font-weight: 600;
+}
+.update-toast-text span {
+  font-size:   12px;
+  opacity:     0.75;
+  white-space: nowrap;
+  overflow:    hidden;
+  text-overflow: ellipsis;
+}
+.update-toast-actions {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-shrink: 0;
+}
+.update-toast-restart {
+  background:    rgba(255,255,255,0.18);
+  color:         #FFFFFF;
+  border:        none;
+  border-radius: 6px;
+  padding:       6px 12px;
+  font-size:     12px;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    background 120ms ease;
+  font-family:   inherit;
+}
+.update-toast-restart:hover {
+  background: rgba(255,255,255,0.28);
+}
+.update-toast-dismiss {
+  background:  transparent;
+  color:       rgba(255,255,255,0.6);
+  border:      none;
+  font-size:   14px;
+  cursor:      pointer;
+  padding:     2px 4px;
+  line-height: 1;
+  font-family: inherit;
+  transition:  color 120ms ease;
+}
+.update-toast-dismiss:hover {
+  color: #FFFFFF;
+}
+
 /* ── Card: current task label ────────────────────────────────────────────────── */
 .current-task-label {
   font-weight: 600;

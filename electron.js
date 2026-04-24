@@ -1,5 +1,5 @@
 // Electron main process — starts Express server, then opens the app window
-const { app, BrowserWindow, shell, dialog } = require('electron');
+const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -14,6 +14,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,   // keep renderer isolated from Node
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
     title: 'Project Dashboard',
     show: false,  // reveal only after content is ready to avoid a white flash
@@ -47,18 +48,14 @@ function initAutoUpdater() {
   autoUpdater.autoDownload = true;       // download silently in the background
   autoUpdater.autoInstallOnAppQuit = true; // also install automatically on next quit
 
-  // When the update has been downloaded, ask the user whether to restart now
+  // When the update has been downloaded, show a toast in the renderer instead of a system dialog
   autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Ready',
-      message: 'A new version of Project Dashboard has been downloaded.',
-      detail: 'Restart now to apply the update, or continue and it will install on next close.',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-    }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall();
-    });
+    if (mainWindow) mainWindow.webContents.send('update-ready');
+  });
+
+  // Renderer's "Restart Now" button sends this — apply the downloaded update immediately
+  ipcMain.on('restart-app', () => {
+    autoUpdater.quitAndInstall();
   });
 
   // Log errors silently — don't interrupt the user if update check fails

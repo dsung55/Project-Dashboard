@@ -1,13 +1,14 @@
 {
   "name": "project-dashboard",
-  "version": "1.0.0",
+  "version": "1.5.3",
   "description": "Local project management dashboard",
   "main": "electron.js",
   "scripts": {
     "start": "node server.js",
     "electron": "electron .",
     "dist": "electron-builder --win",
-    "release": "electron-builder --win --publish always"
+    "dist:mac": "electron-builder --mac",
+    "release": "electron-builder --publish always"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
@@ -32,6 +33,16 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Project Dashboard"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "title": "Project Dashboard",
+      "window": { "width": 540, "height": 380 }
     },
     "files": [
       "**/*",

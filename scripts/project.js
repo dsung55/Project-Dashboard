@@ -1201,7 +1201,7 @@ function computeTlGeometry(maxAbove, maxBelow, availH) {
   if (availH > 0 && rawH > availH) {
     const scale = availH / rawH;
     stemBase  = Math.max(14, Math.round(TL_STEM_BASE  * scale));
-    levelStep = Math.max(20, Math.round(TL_LEVEL_STEP * scale));
+    levelStep = Math.max(TL_LABEL_H + 4, Math.round(TL_LEVEL_STEP * scale));
   }
 
   const aboveH    = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxAbove * levelStep;
@@ -1529,9 +1529,11 @@ function repositionTimeline() {
   // Re-run collision avoidance — positions change relative to each other when zooming
   const placements = computePlacements(tlDatedItems, dateToPct, trackW);
 
-  // Recalculate track height based on new level usage
+  // Recalculate track height based only on visible items — off-screen items can have
+  // extreme levels that over-compress the geometry and cause labels to overlap
   let maxAbove = 0, maxBelow = 0;
   placements.forEach(p => {
+    if (p.pct < -30 || p.pct > 130) return; // skip off-screen items
     if (p.side === 'above') maxAbove = Math.max(maxAbove, p.level);
     else                    maxBelow = Math.max(maxBelow, p.level);
   });

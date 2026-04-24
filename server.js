@@ -286,13 +286,19 @@ function buildExampleProject() {
   const c8 = daysFrom(now,  -75, 12,  0).toISOString();  // ~2.5 months ago
   const c9 = daysFrom(now,  -30,  7, 45).toISOString();  // ~1 month ago
 
-  // dueDate values ({ month, day, year } — the format the UI reads and writes)
-  const d1 = toDateObj(daysFrom(now,   14, 10,  0));  // ~2 weeks out
-  const d2 = toDateObj(daysFrom(now,   45,  0,  0));  // ~6 weeks out
-  const d3 = toDateObj(daysFrom(now,   90,  0,  0));  // ~3 months out
-  const d4 = toDateObj(daysFrom(now,  150,  0,  0));  // ~5 months out
-  const d5 = toDateObj(daysFrom(now,  210,  0,  0));  // ~7 months out
-  const d6 = toDateObj(daysFrom(now,  365,  0,  0));  // ~1 year out
+  // dueDate values ({ month, day, year } — spread from near-term to ~6 months out)
+  const d1  = toDateObj(daysFrom(now,    3,  0,  0));  // ~3 days out
+  const d2  = toDateObj(daysFrom(now,    5,  0,  0));  // ~5 days out
+  const d3  = toDateObj(daysFrom(now,   11,  0,  0));  // ~1.5 weeks out
+  const d4  = toDateObj(daysFrom(now,   18,  0,  0));  // ~2.5 weeks out
+  const d5  = toDateObj(daysFrom(now,   28,  0,  0));  // ~1 month out
+  const d6  = toDateObj(daysFrom(now,   40,  0,  0));  // ~6 weeks out
+  const d7  = toDateObj(daysFrom(now,   54,  0,  0));  // ~8 weeks out
+  const d8  = toDateObj(daysFrom(now,   70,  0,  0));  // ~10 weeks out
+  const d9  = toDateObj(daysFrom(now,   89,  0,  0));  // ~3 months out
+  const d10 = toDateObj(daysFrom(now,  115,  0,  0));  // ~4 months out
+  const d11 = toDateObj(daysFrom(now,  145,  0,  0));  // ~5 months out
+  const d12 = toDateObj(daysFrom(now,  176,  0,  0));  // ~6 months out
 
   return {
     id: '00000000-0000-0000-0000-000000000001',
@@ -303,9 +309,80 @@ function buildExampleProject() {
     status: 'ongoing',
     notes: '',
     purpose: 'Track daily nutrition, build healthy meal habits, and monitor weight loss progress over 90 days.',
-    createdAt: daysFrom(now, -365, 10, 0).toISOString(),
+    createdAt: daysFrom(now, -52, 10, 0).toISOString(),
     files: [],
     tasks: [
+      // ── Incomplete (with due dates — appear on the timeline) ────────────────
+      {
+        id: 'ex-task-010', text: 'Track daily water intake (target: 3L per day)',
+        completed: false, completedAt: null, notes: '', dueDate: d1,
+        subItems: []
+      },
+      {
+        id: 'ex-task-011', text: 'Plan and prep meals every Sunday for the week ahead',
+        completed: false, completedAt: null, notes: '', dueDate: d2,
+        subItems: [
+          { id: 'ex-sub-011a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: d2 },
+          { id: 'ex-sub-011b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: d2 }
+        ]
+      },
+      {
+        id: 'ex-task-012', text: 'Define cheat meal rules and frequency',
+        completed: false, completedAt: null, notes: '', dueDate: d3,
+        subItems: []
+      },
+      {
+        id: 'ex-task-013', text: 'Research healthy restaurant options near the office',
+        completed: false, completedAt: null, notes: '', dueDate: d4,
+        subItems: [
+          { id: 'ex-sub-013a', text: 'Find 3 lunch spots that publish nutrition info', completed: false, dueDate: d4 },
+          { id: 'ex-sub-013b', text: 'Identify the safest menu items at each spot', completed: false, dueDate: d4 },
+          { id: 'ex-sub-013c', text: 'Set a 700 cal max for any eating-out lunch', completed: false, dueDate: d4 }
+        ]
+      },
+      {
+        id: 'ex-task-014', text: 'Complete 30-day progress review and adjust targets',
+        completed: false, completedAt: null, notes: '', dueDate: d5,
+        subItems: []
+      },
+      {
+        id: 'ex-task-015', text: 'Incorporate 30 minutes of light exercise 3x per week',
+        completed: false, completedAt: null, notes: '', dueDate: d6,
+        subItems: []
+      },
+      {
+        id: 'ex-task-016', text: 'Try a 2-week intermittent fasting (16:8) experiment',
+        completed: false, completedAt: null, notes: '', dueDate: d7,
+        subItems: [
+          { id: 'ex-sub-016a', text: 'Pick an eating window (12pm–8pm)', completed: false, dueDate: d7 },
+          { id: 'ex-sub-016b', text: 'Track energy levels and hunger through the trial', completed: false, dueDate: d7 }
+        ]
+      },
+      {
+        id: 'ex-task-017', text: 'Take 3-month progress photos and measurements',
+        completed: false, completedAt: null, notes: '', dueDate: d8,
+        subItems: []
+      },
+      {
+        id: 'ex-task-018', text: 'Complete full 90-day diet challenge and debrief',
+        completed: false, completedAt: null, notes: '', dueDate: d9,
+        subItems: []
+      },
+      {
+        id: 'ex-task-019', text: 'Plan summer BBQ and social-eating strategies',
+        completed: false, completedAt: null, notes: '', dueDate: d10,
+        subItems: []
+      },
+      {
+        id: 'ex-task-020', text: 'Set next-phase goals and adjust macros for maintenance',
+        completed: false, completedAt: null, notes: '', dueDate: d11,
+        subItems: []
+      },
+      {
+        id: 'ex-task-021', text: 'Complete 6-month full progress review',
+        completed: false, completedAt: null, notes: '', dueDate: d12,
+        subItems: []
+      },
       // ── Completed ───────────────────────────────────────────────────────────
       {
         id: 'ex-task-001', text: 'Define daily calorie and macro goals',
@@ -321,86 +398,30 @@ function buildExampleProject() {
         subItems: []
       },
       {
-        id: 'ex-task-003', text: 'Research meal tracking apps for inspiration',
+        id: 'ex-task-003', text: 'Build a weekly grocery list template',
         completed: true, completedAt: c3, notes: '',
-        subItems: []
+        subItems: [
+          { id: 'ex-sub-003a', text: 'List lean protein sources', completed: true, dueDate: null },
+          { id: 'ex-sub-003b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
+          { id: 'ex-sub-003c', text: 'List pantry staples to always keep stocked', completed: true, dueDate: null }
+        ]
       },
       {
-        id: 'ex-task-004', text: 'Build a weekly grocery list template',
+        id: 'ex-task-004', text: 'Log every meal for the first two weeks',
         completed: true, completedAt: c4, notes: '',
-        subItems: [
-          { id: 'ex-sub-004a', text: 'List lean protein sources', completed: true, dueDate: null },
-          { id: 'ex-sub-004b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
-          { id: 'ex-sub-004c', text: 'List pantry staples to always keep stocked', completed: true, dueDate: null }
-        ]
+        subItems: []
       },
       {
-        id: 'ex-task-005', text: 'Log every meal for the first two weeks',
+        id: 'ex-task-005', text: 'Set up a weekly weigh-in routine',
         completed: true, completedAt: c5, notes: '',
-        subItems: []
+        subItems: [
+          { id: 'ex-sub-005a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
+          { id: 'ex-sub-005b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
+        ]
       },
       {
-        id: 'ex-task-006', text: 'Set up a weekly weigh-in routine',
+        id: 'ex-task-006', text: 'Identify go-to high-protein breakfast options',
         completed: true, completedAt: c6, notes: '',
-        subItems: [
-          { id: 'ex-sub-006a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
-          { id: 'ex-sub-006b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
-        ]
-      },
-      {
-        id: 'ex-task-007', text: 'Identify go-to high-protein breakfast options',
-        completed: true, completedAt: c7, notes: '',
-        subItems: []
-      },
-      {
-        id: 'ex-task-008', text: 'Try a 30-day no added sugar challenge',
-        completed: true, completedAt: c8, notes: '',
-        subItems: [
-          { id: 'ex-sub-008a', text: 'Read ingredient labels and cut hidden sugars', completed: true, dueDate: null },
-          { id: 'ex-sub-008b', text: 'Replace sugary snacks with fruit and nuts', completed: true, dueDate: null }
-        ]
-      },
-      {
-        id: 'ex-task-009', text: 'Review first 90 days and adjust calorie targets',
-        completed: true, completedAt: c9, notes: '',
-        subItems: []
-      },
-      // ── Incomplete ──────────────────────────────────────────────────────────
-      {
-        id: 'ex-task-010', text: 'Plan and prep meals every Sunday for the week ahead',
-        completed: false, completedAt: null, notes: '', dueDate: d1,
-        subItems: [
-          { id: 'ex-sub-010a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: d1 },
-          { id: 'ex-sub-010b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: d1 }
-        ]
-      },
-      {
-        id: 'ex-task-011', text: 'Track daily water intake (target: 3L per day)',
-        completed: false, completedAt: null, notes: '', dueDate: d2,
-        subItems: []
-      },
-      {
-        id: 'ex-task-012', text: 'Research healthy restaurant options near the office',
-        completed: false, completedAt: null, notes: '', dueDate: d3,
-        subItems: [
-          { id: 'ex-sub-012a', text: 'Find 3 lunch spots that publish nutrition info', completed: false, dueDate: d3 },
-          { id: 'ex-sub-012b', text: 'Identify the safest menu items at each spot', completed: false, dueDate: d3 },
-          { id: 'ex-sub-012c', text: 'Set a 700 cal max for any eating-out lunch', completed: false, dueDate: d3 }
-        ]
-      },
-      {
-        id: 'ex-task-013', text: 'Incorporate 30 minutes of light exercise 3x per week',
-        completed: false, completedAt: null, notes: '', dueDate: d4,
-        subItems: []
-      },
-      {
-        id: 'ex-task-014', text: 'Define cheat meal rules and frequency',
-        completed: false, completedAt: null, notes: '', dueDate: d5,
-        subItems: []
-      },
-      {
-        id: 'ex-task-015', text: 'Complete full 6-month progress review and set next goals',
-        completed: false, completedAt: null, notes: '', dueDate: d6,
         subItems: []
       }
     ]
@@ -506,9 +527,23 @@ function startServer(callback) {
   bootstrap();
   migrateIndex();
   migrateDueDates();
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Dashboard running at http://localhost:${PORT}`);
     if (callback) callback();
+  });
+
+  // Port already in use — likely the dev server or another instance is running
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      const { dialog, app: electronApp } = require('electron');
+      dialog.showErrorBox(
+        'Port Already In Use',
+        `Port ${PORT} is already occupied.\n\nClose any other instance of Project Dashboard (or the dev server) and try again.`
+      );
+      electronApp.quit();
+    } else {
+      throw err;
+    }
   });
 }
 
