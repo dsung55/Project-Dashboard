@@ -25,7 +25,8 @@
     "asar": false,
     "win": {
       "target": "nsis",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "Project Dashboard (Windows).${ext}"
     },
     "nsis": {
       "oneClick": false,

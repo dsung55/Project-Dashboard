@@ -95,6 +95,12 @@ jobs:
           name: mac-dmg
           path: artifacts/
 
+      - name: Rename artifacts to friendly display names
+        run: |
+          cd artifacts
+          find . -name "*arm64*.dmg" -exec mv {} "Project Dashboard (Mac - Apple Silicon).dmg" \;
+          find . -name "*.dmg" ! -name "*Apple Silicon*" -exec mv {} "Project Dashboard (Mac - Intel).dmg" \;
+
       - name: Create/update GitHub Release and attach files
         uses: softprops/action-gh-release@v2
         with:
