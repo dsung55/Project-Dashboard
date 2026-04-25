@@ -1,14 +1,19 @@
-# Builds and publishes installers for Windows and Mac on every version tag push.
-# Trigger: push a tag like v1.5.3 -> workflow runs -> artifacts attached to a GitHub Release.
+# Builds and publishes installers for Windows and Mac.
+#
+# Manual-only: trigger from the Actions tab. Tag pushes do NOT auto-run this
+# workflow because `npm run release` already publishes the Windows installer
+# and `latest.yml` locally — letting both pipelines write to the same release
+# corrupts the SHA-512 in `latest.yml` (different builds, same filenames).
+#
+# Run this workflow manually only when a Mac DMG is needed, or after deleting
+# the local-published release on GitHub so this is the sole publisher.
 #
 # Uses the auto-provided GITHUB_TOKEN (no manual secret setup required).
 
 name: Build & Release
 
 on:
-  push:
-    tags:
-      - 'v*'          # runs on v1.0.0, v1.5.3, etc.
+  workflow_dispatch:    # manual run only — pick the tag/branch from the Actions UI
 
 permissions:
   contents: write     # required to create/update GitHub Releases
