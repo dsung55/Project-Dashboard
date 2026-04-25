@@ -1,4 +1,4 @@
-// settings.js — Settings page: theme, phases, and update log
+// settings.js — Settings page: theme, phases, customizations, and update log
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let phases = [];
@@ -15,6 +15,7 @@ async function init() {
   } catch (err) {
     showToast('Could not load settings: ' + err.message, true);
   }
+  initCustomizations();
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -137,6 +138,189 @@ async function handleThemeChange(theme) {
   }
 }
 
+// ── Customizations tab ────────────────────────────────────────────────────────
+
+// Bootstrap the Customizations tab: restore bg state and load project list
+async function initCustomizations() {
+  restoreGlobalBgUI();
+  try {
+    const projects = await api.getProjects();
+    renderProjectBgList(projects);
+  } catch (err) {
+    const el = document.getElementById('project-bg-loading');
+    if (el) el.textContent = 'Could not load projects.';
+  }
+}
+
+// Sync the global-bg upload zone to what is stored in localStorage
+function restoreGlobalBgUI() {
+  const stored = localStorage.getItem('dashboardGlobalBg');
+  const hasApplied = !!stored;
+  // Always show the preview if the server has an image — check by fetching HEAD
+  fetch('/api/backgrounds/global', { method: 'HEAD' })
+    .then(r => {
+      if (r.ok) showGlobalBgUI(true, hasApplied);
+      else       showGlobalBgUI(false, false);
+    })
+    .catch(() => showGlobalBgUI(false, false));
+}
+
+// Show or hide the global-bg preview, apply checkbox, and remove button
+function showGlobalBgUI(hasImage, isApplied) {
+  const preview   = document.getElementById('global-bg-preview');
+  const thumb     = document.getElementById('global-bg-thumb');
+  const applyWrap = document.getElementById('global-bg-apply-wrap');
+  const checkbox  = document.getElementById('global-bg-apply-checkbox');
+  const removeBtn = document.getElementById('btn-remove-global-bg');
+
+  if (hasImage) {
+    // Cache-bust so the browser always shows the current file
+    thumb.src = '/api/backgrounds/global?t=' + Date.now();
+    preview.style.display   = '';
+    applyWrap.style.display = '';
+    removeBtn.style.display = '';
+    checkbox.checked = isApplied;
+  } else {
+    preview.style.display   = 'none';
+    applyWrap.style.display = 'none';
+    removeBtn.style.display = 'none';
+    checkbox.checked = false;
+  }
+}
+
+// Resize an image File to fit within the screen dimensions, returning a Blob
+function resizeImageToScreen(file) {
+  return new Promise((resolve, reject) => {
+    const maxW = window.screen.width  || 1920;
+    const maxH = window.screen.height || 1080;
+    const img  = new Image();
+    const url  = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // Scale down only — never enlarge
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')), 'image/jpeg', 0.90);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+    img.src = url;
+  });
+}
+
+// Handle uploading a new global background photo
+async function handleGlobalBgUpload(file) {
+  try {
+    const resized = await resizeImageToScreen(file);
+    await api.uploadGlobalBackground(resized);
+    // After upload, default to applied
+    const url = '/api/backgrounds/global?t=' + Date.now();
+    localStorage.setItem('dashboardGlobalBg', url);
+    api.applyGlobalBackground();
+    showGlobalBgUI(true, true);
+    showToast('Background uploaded and applied');
+  } catch (err) {
+    showToast('Could not upload background: ' + err.message, true);
+  }
+}
+
+// Handle removing the global background
+async function handleRemoveGlobalBg() {
+  try {
+    await api.removeGlobalBackground();  // also clears localStorage + unapplies
+    showGlobalBgUI(false, false);
+    showToast('Background removed');
+  } catch (err) {
+    showToast('Could not remove background: ' + err.message, true);
+  }
+}
+
+// Render the per-project background list
+function renderProjectBgList(projects) {
+  const container = document.getElementById('project-bg-list');
+  if (!container) return;
+
+  if (!projects.length) {
+    container.innerHTML = '<p class="text-secondary text-sm">No projects yet.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  projects.forEach(project => {
+    const hasBg = !!localStorage.getItem('dashboardProjectBg_' + project.id);
+    const item  = document.createElement('div');
+    item.className = 'project-bg-item';
+    item.dataset.id = project.id;
+
+    item.innerHTML = `
+      <div class="project-bg-item-info">
+        <span class="project-bg-color-dot" style="background:${escapeHtml(project.color || '#ccc')}"></span>
+        <span class="project-bg-item-name">${escapeHtml(project.name)}</span>
+      </div>
+      <div class="project-bg-item-actions">
+        <div class="project-bg-thumb-wrap" style="${hasBg ? '' : 'display:none'}">
+          <img class="bg-preview-thumb bg-preview-thumb--sm"
+               src="${hasBg ? '/api/projects/' + project.id + '/background?t=' + Date.now() : ''}"
+               alt="">
+        </div>
+        <label class="btn btn-secondary btn-sm" for="proj-bg-${escapeHtml(project.id)}" style="cursor:pointer">
+          ${hasBg ? 'Change' : 'Set Background'}
+        </label>
+        <input type="file" id="proj-bg-${escapeHtml(project.id)}"
+               data-project-id="${escapeHtml(project.id)}"
+               accept="image/*" class="visually-hidden proj-bg-input">
+        <button class="btn btn-ghost btn-sm btn-remove-proj-bg"
+                data-project-id="${escapeHtml(project.id)}"
+                style="${hasBg ? '' : 'display:none'}">Remove</button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  // Wire up file inputs
+  container.querySelectorAll('.proj-bg-input').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const file      = e.target.files[0];
+      const projectId = input.dataset.projectId;
+      if (!file || !projectId) return;
+      try {
+        const resized = await resizeImageToScreen(file);
+        await api.uploadProjectBackground(projectId, resized);
+        const url = '/api/projects/' + projectId + '/background?t=' + Date.now();
+        localStorage.setItem('dashboardProjectBg_' + projectId, url);
+        // Re-render to reflect the new state
+        const projects = await api.getProjects();
+        renderProjectBgList(projects);
+        showToast('Project background updated');
+      } catch (err) {
+        showToast('Could not upload project background: ' + err.message, true);
+      }
+      input.value = '';
+    });
+  });
+
+  // Wire up remove buttons
+  container.querySelectorAll('.btn-remove-proj-bg').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const projectId = btn.dataset.projectId;
+      try {
+        await api.removeProjectBackground(projectId);
+        const projects = await api.getProjects();
+        renderProjectBgList(projects);
+        showToast('Project background removed');
+      } catch (err) {
+        showToast('Could not remove project background: ' + err.message, true);
+      }
+    });
+  });
+}
+
 // ── Event wiring ──────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -167,6 +351,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if ((stored.theme || 'system') === 'system') {
       handleThemeChange('system');
     }
+  });
+
+  // Global background file input
+  const globalBgInput = document.getElementById('global-bg-file-input');
+  globalBgInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleGlobalBgUpload(file);
+    globalBgInput.value = '';
+  });
+
+  // Global background remove button
+  document.getElementById('btn-remove-global-bg')?.addEventListener('click', handleRemoveGlobalBg);
+
+  // Apply-globally checkbox
+  document.getElementById('global-bg-apply-checkbox')?.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      const url = '/api/backgrounds/global?t=' + Date.now();
+      localStorage.setItem('dashboardGlobalBg', url);
+    } else {
+      localStorage.removeItem('dashboardGlobalBg');
+    }
+    api.applyGlobalBackground();
   });
 });
 

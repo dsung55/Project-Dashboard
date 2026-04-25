@@ -143,6 +143,80 @@ async function saveTasks(tasks) {
   return res.json();
 }
 
+// ── Background image API ───────────────────────────────────────────────────────
+
+// Upload the global background image (accepts File or Blob)
+async function uploadGlobalBackground(file) {
+  const form = new FormData();
+  // Provide a filename so multer can detect the extension; use .jpg for resized blobs
+  const name = file instanceof File ? file.name : 'background.jpg';
+  form.append('image', file, name);
+  const res = await fetch('/api/backgrounds/global', { method: 'POST', body: form });
+  if (!res.ok) {
+    let msg = 'Failed to upload background';
+    try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+// Remove the global background image from server and localStorage
+async function removeGlobalBackground() {
+  const res = await fetch('/api/backgrounds/global', { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to remove background');
+  localStorage.removeItem('dashboardGlobalBg');
+  applyGlobalBackground();
+  return res.json();
+}
+
+// Upload a per-project background image (accepts File or Blob)
+async function uploadProjectBackground(id, file) {
+  const form = new FormData();
+  const name = file instanceof File ? file.name : 'background.jpg';
+  form.append('image', file, name);
+  const res = await fetch(`/api/projects/${id}/background`, { method: 'POST', body: form });
+  if (!res.ok) {
+    let msg = 'Failed to upload project background';
+    try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+// Remove a per-project background image
+async function removeProjectBackground(id) {
+  const res = await fetch(`/api/projects/${id}/background`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to remove project background');
+  localStorage.removeItem('dashboardProjectBg_' + id);
+  return res.json();
+}
+
+// ── Background application ────────────────────────────────────────────────────
+
+// Apply (or clear) the global background from localStorage on any page
+function applyGlobalBackground() {
+  const bg = localStorage.getItem('dashboardGlobalBg');
+  if (bg) {
+    document.documentElement.style.setProperty('--page-bg-image', `url('${bg}')`);
+    document.documentElement.classList.add('has-bg');
+  } else {
+    document.documentElement.style.removeProperty('--page-bg-image');
+    document.documentElement.classList.remove('has-bg');
+  }
+}
+
+// Apply a project-specific background (overrides global on the project page)
+function applyProjectBackground(projectId) {
+  const bg = localStorage.getItem('dashboardProjectBg_' + projectId);
+  if (bg) {
+    document.documentElement.style.setProperty('--page-bg-image', `url('${bg}')`);
+    document.documentElement.classList.add('has-bg');
+  }
+}
+
+// Auto-apply the global background on every page load
+document.addEventListener('DOMContentLoaded', applyGlobalBackground);
+
 // Expose all API functions on the global window.api object
 window.api = {
   getProjects,
@@ -156,5 +230,11 @@ window.api = {
   getConfig,
   saveConfig,
   getTasks,
-  saveTasks
+  saveTasks,
+  uploadGlobalBackground,
+  removeGlobalBackground,
+  uploadProjectBackground,
+  removeProjectBackground,
+  applyGlobalBackground,
+  applyProjectBackground
 };

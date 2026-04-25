@@ -3,6 +3,18 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.8 — Backgrounds, Customizations Tab & Timeline Polish
+
+- **Global background image:** New Settings → Customizations → Global Background lets you upload a photo and apply it as the backdrop across every page. A frosted-glass blur sits over the image so cards, sections, and form inputs stay readable, and the effect adapts to dark mode automatically.
+- **Per-project background images on dashboard cards:** Setting a background image for a project in Settings → Customizations now displays that image directly on the project's card on the home page. The image fills the card with a subtle bottom-to-top gradient so the photo is prominent at the top and text remains readable at the bottom.
+- **White card text on background images:** Project name, phase, and task text on bg-image cards automatically switch to white so they're legible against any photo.
+- **New "Customizations" tab in Settings:** Appearance (theme toggle) moved out of its always-visible row and into a new Customizations tab alongside Global Background and Project Backgrounds — Settings is now organized as Phases / Update Log / Customizations.
+- **Settings backgrounds column centered:** Section headings and descriptions in the Backgrounds column of Settings → Customizations are now centered, and the project name column is wider so names are no longer truncated.
+- **Help tooltips on page titles:** A small "?" badge sits next to "Projects" and "Tasks" page titles — hover for a one-line description of what the page is for.
+- **Timeline edge dots:** The first and last markers on the timeline are now filled circles (matching the baseline line) instead of tick marks, giving the timeline a more finished, polished look.
+- **Timeline month/year tick labels:** Month name labels (Jan, Feb, …) appear under each tick on the baseline; January ticks are taller and bolder and show the year. Label density auto-thins as you zoom out so labels never crowd each other.
+- **Timeline snaps to month boundaries:** The visible date range now starts on the first of the earliest task's month and ends on the first of the month after the latest task — the timeline always begins and ends on a clean tick mark instead of floating midway through a month.
+
 ## v1.5.7 — Timeline Centering Fix (Electron)
 
 - **Fixed: Timeline "Today" opens off-center in the installed app:** Two bugs caused today's marker to appear shifted on first open in the packaged Electron version. The scroll position of the timeline container is now reset every time the timeline opens, and layout dimensions are measured after two animation frames (instead of one) so Electron's layout engine has fully settled before the timeline renders.

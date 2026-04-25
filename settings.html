@@ -36,20 +36,63 @@
         <h1 class="page-title">Settings</h1>
       </div>
 
-      <!-- Appearance section (always visible, above tabs) -->
-      <div class="settings-appearance">
-        <div class="section-heading">Appearance</div>
-        <div class="theme-toggle-group" id="theme-toggle">
-          <button class="theme-toggle-btn" data-theme="light">Light</button>
-          <button class="theme-toggle-btn" data-theme="system">System</button>
-          <button class="theme-toggle-btn" data-theme="dark">Dark</button>
-        </div>
-      </div>
-
       <!-- Sub-tab bar -->
       <div class="settings-tabs">
         <button class="settings-tab active" data-tab="phases">Phases</button>
         <button class="settings-tab" data-tab="update-log">Update Log</button>
+        <button class="settings-tab" data-tab="customizations">Customizations</button>
+      </div>
+
+      <!-- Customizations tab -->
+      <div class="settings-panel settings-section" id="tab-customizations" style="display:none">
+
+        <div class="customizations-grid">
+
+          <!-- Left column: Appearance -->
+          <div class="customizations-col">
+            <div class="section-heading">Appearance</div>
+            <div class="theme-toggle-group" id="theme-toggle">
+              <button class="theme-toggle-btn" data-theme="light">Light</button>
+              <button class="theme-toggle-btn" data-theme="system">System</button>
+              <button class="theme-toggle-btn" data-theme="dark">Dark</button>
+            </div>
+          </div>
+
+          <!-- Right column: Global Background + Project Backgrounds -->
+          <div class="customizations-col customizations-col--bg">
+
+            <!-- Global background subsection -->
+            <div class="section-heading">Global Background</div>
+            <p class="text-secondary text-sm" style="margin-bottom: 16px; line-height: 1.6;">
+              Upload a photo and apply it as the background across all pages.
+            </p>
+            <div class="bg-upload-zone" id="global-bg-zone">
+              <div class="bg-preview-wrap" id="global-bg-preview" style="display:none">
+                <img class="bg-preview-thumb" id="global-bg-thumb" src="" alt="Background preview">
+              </div>
+              <div class="bg-zone-actions">
+                <label class="btn btn-secondary" for="global-bg-file-input" style="cursor:pointer">Upload Photo</label>
+                <input type="file" id="global-bg-file-input" accept="image/*" class="visually-hidden">
+                <label class="bg-apply-label" id="global-bg-apply-wrap" style="display:none">
+                  <input type="checkbox" id="global-bg-apply-checkbox">
+                  Apply globally
+                </label>
+                <button class="btn btn-ghost btn-sm" id="btn-remove-global-bg" style="display:none">Remove</button>
+              </div>
+            </div>
+
+            <!-- Per-project backgrounds -->
+            <div class="section-heading" style="margin-top: 32px;">Project Backgrounds</div>
+            <p class="text-secondary text-sm" style="margin-bottom: 16px; line-height: 1.6;">
+              Set a custom background image for individual projects.
+            </p>
+            <div id="project-bg-list" class="project-bg-list">
+              <p class="text-secondary text-sm" id="project-bg-loading">Loading projects…</p>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
       <!-- Phases tab -->
@@ -70,8 +113,23 @@
       </div>
 
       <!-- Update Log tab -->
-      <div class="settings-panel" id="tab-update-log" style="display:none; max-width:520px;">
+      <div class="settings-panel" id="tab-update-log" style="display:none; max-width:520px; width:100%;">
         <div class="section-heading">Update Log</div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.5.8</div>
+          <ul class="update-log-list">
+            <li>New Global Background — upload a photo in Settings → Customizations to apply it as the backdrop across every page, with a frosted-glass blur so content stays readable</li>
+            <li>Project background images now appear on dashboard cards — set a background in Settings → Customizations and see it as the card's photo on the home page</li>
+            <li>Text on bg-image cards is now white for readability against any photo</li>
+            <li>New "Customizations" tab in Settings — Appearance (theme), Global Background, and Project Backgrounds are now grouped together</li>
+            <li>"?" help tooltips next to the Projects and Tasks page titles</li>
+            <li>Timeline edges are now rounded dots instead of tick marks</li>
+            <li>Timeline month/year tick labels — Jan/Feb/Mar… labels under each tick with bold year markers in January; label density auto-thins on zoom-out</li>
+            <li>Timeline now starts and ends on clean month boundaries instead of floating mid-month</li>
+            <li>Settings Backgrounds column headings are centered and project names are no longer truncated</li>
+          </ul>
+        </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.5.7</div>

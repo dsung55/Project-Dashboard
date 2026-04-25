@@ -10,11 +10,12 @@ const PORT = 3000;
 // ── Path constants ────────────────────────────────────────────────────────────
 // When running inside Electron, DATA_DIR is set to app.getPath('userData')/data
 // so data survives in a writable OS folder rather than next to the packaged exe.
-const DATA_DIR     = process.env.DATA_DIR || path.join(__dirname, 'data');
-const PROJECTS_DIR = path.join(DATA_DIR, 'projects');
-const PROJECTS_IDX = path.join(DATA_DIR, 'projects.json');
-const CONFIG_FILE  = path.join(DATA_DIR, 'config.json');
-const TASKS_FILE   = path.join(DATA_DIR, 'tasks.json');
+const DATA_DIR        = process.env.DATA_DIR || path.join(__dirname, 'data');
+const PROJECTS_DIR    = path.join(DATA_DIR, 'projects');
+const PROJECTS_IDX    = path.join(DATA_DIR, 'projects.json');
+const CONFIG_FILE     = path.join(DATA_DIR, 'config.json');
+const TASKS_FILE      = path.join(DATA_DIR, 'tasks.json');
+const BACKGROUNDS_DIR = path.join(DATA_DIR, 'backgrounds');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,33 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB max
+
+// Multer for global background — saved as backgrounds/global.<ext>
+const bgStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    try { fs.mkdirSync(BACKGROUNDS_DIR, { recursive: true }); } catch (e) { return cb(e); }
+    cb(null, BACKGROUNDS_DIR);
+  },
+  filename(_req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, 'global' + ext);
+  }
+});
+const bgUpload = multer({ storage: bgStorage, limits: { fileSize: 20 * 1024 * 1024 } });
+
+// Multer for per-project background — saved as projects/<id>/background.<ext>
+const projBgStorage = multer.diskStorage({
+  destination(req, _file, cb) {
+    const dest = path.join(PROJECTS_DIR, req.params.id);
+    try { fs.mkdirSync(dest, { recursive: true }); } catch (e) { return cb(e); }
+    cb(null, dest);
+  },
+  filename(_req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, 'background' + ext);
+  }
+});
+const projBgUpload = multer({ storage: projBgStorage, limits: { fileSize: 20 * 1024 * 1024 } });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -253,6 +281,80 @@ app.put('/api/tasks', (req, res) => {
   res.json(tasks);
 });
 
+// ── Background images ─────────────────────────────────────────────────────────
+
+// Helper: find an existing background file with any common image extension
+const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+function findBackground(dir, name) {
+  for (const ext of IMG_EXTS) {
+    const f = path.join(dir, name + ext);
+    if (fs.existsSync(f)) return f;
+  }
+  return null;
+}
+
+// DELETE old global background files with different extensions before a new upload
+function cleanOldBackgrounds(dir, name, keepExt) {
+  for (const ext of IMG_EXTS) {
+    if (ext === keepExt) continue;
+    const f = path.join(dir, name + ext);
+    if (fs.existsSync(f)) fs.unlinkSync(f);
+  }
+}
+
+// POST /api/backgrounds/global — upload global background image
+app.post('/api/backgrounds/global', (req, res) => {
+  bgUpload.single('image')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    cleanOldBackgrounds(BACKGROUNDS_DIR, 'global', ext);
+    res.json({ ok: true, url: '/api/backgrounds/global' });
+  });
+});
+
+// GET /api/backgrounds/global — serve the global background image
+app.get('/api/backgrounds/global', (_req, res) => {
+  const found = findBackground(BACKGROUNDS_DIR, 'global');
+  if (!found) return res.status(404).json({ error: 'No global background set' });
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(found);
+});
+
+// DELETE /api/backgrounds/global — remove global background
+app.delete('/api/backgrounds/global', (_req, res) => {
+  const found = findBackground(BACKGROUNDS_DIR, 'global');
+  if (found) fs.unlinkSync(found);
+  res.json({ ok: true });
+});
+
+// POST /api/projects/:id/background — upload per-project background
+app.post('/api/projects/:id/background', (req, res) => {
+  projBgUpload.single('image')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    cleanOldBackgrounds(path.join(PROJECTS_DIR, req.params.id), 'background', ext);
+    res.json({ ok: true, url: '/api/projects/' + req.params.id + '/background' });
+  });
+});
+
+// GET /api/projects/:id/background — serve per-project background
+app.get('/api/projects/:id/background', (req, res) => {
+  const found = findBackground(path.join(PROJECTS_DIR, req.params.id), 'background');
+  if (!found) return res.status(404).json({ error: 'No project background set' });
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(found);
+});
+
+// DELETE /api/projects/:id/background — remove per-project background
+app.delete('/api/projects/:id/background', (req, res) => {
+  const found = findBackground(path.join(PROJECTS_DIR, req.params.id), 'background');
+  if (found) fs.unlinkSync(found);
+  res.json({ ok: true });
+});
+
 // ── First-run bootstrap ───────────────────────────────────────────────────────
 
 // Returns a Date offset by `days` from a base date at a fixed time.
@@ -285,6 +387,14 @@ function buildExampleProject() {
   const c7 = daysFrom(now, -120,  8,  0).toISOString();  // ~4 months ago
   const c8 = daysFrom(now,  -75, 12,  0).toISOString();  // ~2.5 months ago
   const c9 = daysFrom(now,  -30,  7, 45).toISOString();  // ~1 month ago
+
+  // dueDate values for completed tasks (set a few days before their completedAt)
+  const cd1 = toDateObj(daysFrom(now, -370,  0,  0));  // due before task-001 completion
+  const cd2 = toDateObj(daysFrom(now, -335,  0,  0));  // due before task-002 completion
+  const cd3 = toDateObj(daysFrom(now, -305,  0,  0));  // due before task-003 completion
+  const cd4 = toDateObj(daysFrom(now, -245,  0,  0));  // due before task-004 completion
+  const cd5 = toDateObj(daysFrom(now, -185,  0,  0));  // due before task-005 completion
+  const cd6 = toDateObj(daysFrom(now, -155,  0,  0));  // due before task-006 completion
 
   // dueDate values ({ month, day, year } — spread from near-term to ~6 months out)
   const d1  = toDateObj(daysFrom(now,    3,  0,  0));  // ~3 days out
@@ -386,7 +496,7 @@ function buildExampleProject() {
       // ── Completed ───────────────────────────────────────────────────────────
       {
         id: 'ex-task-001', text: 'Define daily calorie and macro goals',
-        completed: true, completedAt: c1, notes: '',
+        completed: true, completedAt: c1, notes: '', dueDate: cd1,
         subItems: [
           { id: 'ex-sub-001a', text: 'Use a TDEE calculator to find maintenance calories', completed: true, dueDate: null },
           { id: 'ex-sub-001b', text: 'Set protein / carb / fat ratios (40/35/25)', completed: true, dueDate: null }
@@ -394,12 +504,12 @@ function buildExampleProject() {
       },
       {
         id: 'ex-task-002', text: 'Take starting photos and body measurements',
-        completed: true, completedAt: c2, notes: '',
+        completed: true, completedAt: c2, notes: '', dueDate: cd2,
         subItems: []
       },
       {
         id: 'ex-task-003', text: 'Build a weekly grocery list template',
-        completed: true, completedAt: c3, notes: '',
+        completed: true, completedAt: c3, notes: '', dueDate: cd3,
         subItems: [
           { id: 'ex-sub-003a', text: 'List lean protein sources', completed: true, dueDate: null },
           { id: 'ex-sub-003b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
@@ -408,12 +518,12 @@ function buildExampleProject() {
       },
       {
         id: 'ex-task-004', text: 'Log every meal for the first two weeks',
-        completed: true, completedAt: c4, notes: '',
+        completed: true, completedAt: c4, notes: '', dueDate: cd4,
         subItems: []
       },
       {
         id: 'ex-task-005', text: 'Set up a weekly weigh-in routine',
-        completed: true, completedAt: c5, notes: '',
+        completed: true, completedAt: c5, notes: '', dueDate: cd5,
         subItems: [
           { id: 'ex-sub-005a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
           { id: 'ex-sub-005b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
@@ -421,7 +531,7 @@ function buildExampleProject() {
       },
       {
         id: 'ex-task-006', text: 'Identify go-to high-protein breakfast options',
-        completed: true, completedAt: c6, notes: '',
+        completed: true, completedAt: c6, notes: '', dueDate: cd6,
         subItems: []
       }
     ]

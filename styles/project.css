@@ -1054,16 +1054,61 @@
   opacity:       0.28;
 }
 
-/* Month tick marks on the baseline — one per month boundary, no label */
-.tl-month-tick {
-  position:       absolute;
-  width:          2px;
-  height:         12px;
-  background:     var(--text-primary);
-  opacity:        0.22;
-  transform:      translateX(-50%);
-  pointer-events: none;
-  border-radius:  1px;
+/* Month tick mark wrapper — positions both the tick line and its label */
+.tl-tick-wrap {
+  position:        absolute;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  transform:       translateX(-50%);
+  pointer-events:  none;
+  z-index:         1;
+}
+
+/* Dot cap at the start and end of the timeline baseline */
+.tl-edge-dot {
+  width:         11px;
+  height:        11px;
+  border-radius: 50%;
+  background:    var(--text-primary);
+  opacity:       0.35;
+  flex-shrink:   0;
+}
+
+/* Vertical tick line below the baseline */
+.tl-tick-line {
+  width:         2px;
+  height:        10px;
+  background:    var(--text-primary);
+  opacity:       0.3;
+  border-radius: 1px;
+}
+
+/* January tick line is taller to signal a year boundary */
+.tl-tick-line.tl-tick-year-line {
+  height:  14px;
+  opacity: 0.5;
+}
+
+/* Month/year label beneath the tick line — has a bg pill so it reads on any backdrop */
+.tl-tick-label {
+  font-size:      9px;
+  font-weight:    500;
+  color:          var(--text-secondary);
+  margin-top:     2px;
+  letter-spacing: 0.02em;
+  white-space:    nowrap;
+  background:     var(--bg-primary);
+  border-radius:  3px;
+  padding:        1px 4px;
+  opacity:        0.85;
+}
+
+/* Year label (January tick) — slightly larger and bolder */
+.tl-tick-label.tl-tick-year {
+  font-size:   10px;
+  font-weight: 700;
+  opacity:     1;
 }
 
 /* Each pin is a zero-size anchor placed on the baseline (top set by JS).

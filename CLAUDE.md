@@ -90,3 +90,9 @@ Each task: `id, text, completed, completedAt, notes, subItems[]`
 
 Version history lives in `CHANGELOG.md` and in Settings → Update Log in `settings.html`.
 Add entries only when the user specifies a version number — auto-generate the content.
+
+## Releasing Updates
+
+When the user asks to "push an update", "release a version", or "push to GitHub", always run `npm run release` — not just `git push`. This command builds the Windows installer and publishes it to GitHub Releases with a `latest.yml` file, which is what `electron-updater` reads to detect and download new versions in already-installed copies of the app.
+
+`git push` alone only updates source code and does NOT trigger auto-updates for existing users.

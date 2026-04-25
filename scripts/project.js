@@ -210,6 +210,8 @@ async function init() {
     projectData = project;
     phases      = config.phases || [];
     renderPage();
+    // Apply project-specific background if one has been set (overrides global)
+    api.applyProjectBackground(projectId);
   } catch (err) {
     showToast('Could not load project: ' + err.message, true);
   }
@@ -1370,29 +1372,27 @@ function renderTimeline() {
     return;
   }
 
-  // ── Cache date range — today is always at the exact center of the range so it
-  //    appears in the middle of the timeline on first open regardless of task spread.
-  //    We compute how far the task range extends on each side of today, then take
-  //    the larger half and mirror it, giving a symmetric span around today.
+  // ── Cache date range — snapped to month boundaries so the timeline always starts
+  //    and ends cleanly on a tick mark (no floating empty margins at the edges).
 
-  const ONE_DAY     = 86400000;
-  const todayAnchor = new Date(); todayAnchor.setHours(0, 0, 0, 0);
-  const todayT      = todayAnchor.getTime();
-  const firstTaskT  = datedItems[0].date.getTime();
-  const lastTaskT   = datedItems[datedItems.length - 1].date.getTime();
+  const ONE_DAY    = 86400000;
+  const firstTaskT = datedItems[0].date.getTime();
+  const lastTaskT  = datedItems[datedItems.length - 1].date.getTime();
 
-  // Padding: at least 2 weeks, or 40% of the task span — whichever is larger
-  const taskSpan  = Math.max(ONE_DAY, lastTaskT - firstTaskT);
-  const edgePad   = Math.max(14 * ONE_DAY, taskSpan * 0.4);
+  const firstTaskDate = new Date(firstTaskT);
+  const lastTaskDate  = new Date(lastTaskT);
 
-  // Each side = distance from today to the nearest task edge, plus padding
-  const leftSpan  = Math.max(todayT - firstTaskT, 0) + edgePad;
-  const rightSpan = Math.max(lastTaskT - todayT,  0) + edgePad;
-  const halfSpan  = Math.max(leftSpan, rightSpan); // mirror to keep today centered
+  // Start = first day of the month containing the earliest task
+  // End   = first day of the month AFTER the latest task (clean right-edge tick)
+  tlMinDate = new Date(firstTaskDate.getFullYear(), firstTaskDate.getMonth(), 1);
+  tlMaxDate = new Date(lastTaskDate.getFullYear(),  lastTaskDate.getMonth() + 1, 1);
 
-  tlMinDate = new Date(todayT - halfSpan);
-  tlMaxDate = new Date(todayT + halfSpan);
-  tlRange   = tlMaxDate - tlMinDate;
+  // Guarantee at least a 2-month window so single-month projects stay readable
+  if (tlMaxDate - tlMinDate < 2 * 30 * ONE_DAY) {
+    tlMaxDate = new Date(tlMinDate.getFullYear(), tlMinDate.getMonth() + 2, 1);
+  }
+
+  tlRange = tlMaxDate - tlMinDate;
 
   // Convert a Date to a percentage position within the current viewport
   function dateToPct(date) {
@@ -1435,17 +1435,54 @@ function renderTimeline() {
   // ── Month tick marks — ALL month boundaries created upfront so repositionTimeline
   //    can show/hide them as the viewport shifts without rebuilding the DOM ─────────
 
-  const firstTick = new Date(tlMinDate.getFullYear(), tlMinDate.getMonth() + 1, 1);
+  const TL_MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // tlMinDate is now a month boundary itself, so start ticks there
+  const firstTick = new Date(tlMinDate);
   for (let d = new Date(firstTick); d <= tlMaxDate; d.setMonth(d.getMonth() + 1)) {
     const tickDate = new Date(d);
     const tickPct  = dateToPct(tickDate);
-    const tick = document.createElement('div');
-    tick.className  = 'tl-month-tick';
-    tick.style.left = tickPct + '%';
-    tick.style.top  = (baselineY - 4) + 'px';
-    track.appendChild(tick);
-    tlTickEls.push({ el: tick, date: tickDate });
+    const isJan    = tickDate.getMonth() === 0;
+    const isEdge   = tickDate.getTime() === tlMinDate.getTime() || tickDate.getTime() === tlMaxDate.getTime();
+
+    const tickWrap = document.createElement('div');
+    tickWrap.className  = 'tl-tick-wrap';
+    tickWrap.style.left = tickPct + '%';
+
+    if (isEdge) {
+      // Replace tick mark with a dot centered on the baseline
+      tickWrap.style.top = (baselineY - 3) + 'px'; // center the 11px dot on the 5px baseline
+      const dot = document.createElement('div');
+      dot.className = 'tl-edge-dot';
+      tickWrap.appendChild(dot);
+    } else {
+      tickWrap.style.top  = (baselineY + 5) + 'px'; // sits just below the baseline
+
+      const line = document.createElement('div');
+      line.className = 'tl-tick-line' + (isJan ? ' tl-tick-year-line' : '');
+
+      const lbl = document.createElement('div');
+      lbl.className   = 'tl-tick-label' + (isJan ? ' tl-tick-year' : '');
+      lbl.textContent = isJan ? String(tickDate.getFullYear()) : TL_MONTH_NAMES[tickDate.getMonth()];
+
+      tickWrap.appendChild(line);
+      tickWrap.appendChild(lbl);
+    }
+
+    track.appendChild(tickWrap);
+    tlTickEls.push({ el: tickWrap, date: tickDate });
   }
+
+  // Apply initial tick label density based on total month count
+  const initTotalMonths = tlRange / (30.4375 * 86400000);
+  const initTickStep    = initTotalMonths <= 12 ? 1
+                        : initTotalMonths <= 24 ? 2
+                        : initTotalMonths <= 48 ? 3 : 6;
+  tlTickEls.forEach(({ el, date }) => {
+    const isJan      = date.getMonth() === 0;
+    const monthIndex = date.getFullYear() * 12 + date.getMonth();
+    const lbl        = el.querySelector('.tl-tick-label');
+    if (lbl) lbl.style.display = (isJan || monthIndex % initTickStep === 0) ? '' : 'none';
+  });
 
   // ── Today vertical line + badge — created as two separate elements so the badge
   //    can sit at z-index 5 (above label boxes) while the line stays at z-index 0 ──
@@ -1601,16 +1638,29 @@ function repositionTimeline() {
   track.style.height = trackH + 'px';
   if (tlBaselineEl) tlBaselineEl.style.top = baselineY + 'px';
 
-  // Update month tick positions — show/hide based on current viewport
+  // Determine tick label density from visible month count — fewer labels when zoomed out
+  const visibleFrac   = tlViewEnd - tlViewStart;
+  const totalMonths   = tlRange / (30.4375 * 86400000);
+  const visibleMonths = totalMonths * visibleFrac;
+  const tickStep = visibleMonths <= 12 ? 1
+                 : visibleMonths <= 24 ? 2
+                 : visibleMonths <= 48 ? 3 : 6;
+
+  // Update month tick positions — show line for all in-view ticks, label only for step ticks
   tlTickEls.forEach(({ el, date }) => {
     const pct = dateToPct(date);
     if (pct < -1 || pct > 101) {
       el.style.display = 'none';
-    } else {
-      el.style.display = '';
-      el.style.left    = pct + '%';
-      el.style.top     = (baselineY - 4) + 'px';
+      return;
     }
+    el.style.display = '';
+    el.style.left    = pct + '%';
+    el.style.top     = (baselineY + 5) + 'px';
+    // January labels are always shown; other months shown based on step interval
+    const isJan      = date.getMonth() === 0;
+    const monthIndex = date.getFullYear() * 12 + date.getMonth();
+    const lbl        = el.querySelector('.tl-tick-label');
+    if (lbl) lbl.style.display = (isJan || monthIndex % tickStep === 0) ? '' : 'none';
   });
 
   // Update today line + badge positions

@@ -9,6 +9,7 @@ data/projects/
 data/projects.json
 data/tasks.json
 data/config.json
+data/backgrounds/
 
 # Claude Code project settings (local paths, user-specific permissions)
 .claude/

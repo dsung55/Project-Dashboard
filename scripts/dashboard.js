@@ -155,6 +155,12 @@ function buildCard(project) {
   // Set color dot background (can't be done in template string)
   card.querySelector('.card-color-btn').style.background = project.color || '#4A90D9';
 
+  // Apply per-project background image if one has been set in settings
+  if (localStorage.getItem('dashboardProjectBg_' + project.id)) {
+    card.classList.add('has-card-bg');
+    card.style.setProperty('--card-bg-image', `url('/api/projects/${project.id}/background?t=${Date.now()}')`);
+  }
+
   // Navigate to project detail on card click (but not on interactive elements)
   card.addEventListener('click', (e) => {
     if (e.target.closest('.btn-delete-card, .btn-card-menu, .card-expand-panel, .card-color-btn')) return;
