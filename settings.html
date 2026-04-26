@@ -114,7 +114,31 @@
 
       <!-- Update Log tab -->
       <div class="settings-panel" id="tab-update-log" style="display:none; max-width:520px; width:100%;">
+
+        <!-- Manual update check (only meaningful in the packaged Electron app) -->
+        <div class="updater-controls" id="updater-controls" style="display:none">
+          <div class="section-heading">App Updates</div>
+          <p class="text-secondary text-sm" style="margin-bottom: 12px; line-height: 1.6;">
+            New versions download automatically in the background. Click below to check now or see the current status.
+          </p>
+          <div class="updater-row">
+            <button class="btn btn-secondary" id="btn-check-updates">Check for Updates</button>
+            <span class="updater-status text-secondary text-sm" id="updater-status">Idle.</span>
+          </div>
+        </div>
+
         <div class="section-heading">Update Log</div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.5.9</div>
+          <ul class="update-log-list">
+            <li>Fixed: auto-update is now reliable — older builds shipped a latest.yml whose download URL didn't match the actual file uploaded to GitHub, so existing installs silently 404'd on every update check; installer filenames are now URL-safe and match the URL electron-updater reads</li>
+            <li>Updater now logs every check, download, and error to %APPDATA%\Project Dashboard\logs\main.log so future failures can be diagnosed</li>
+            <li>New "Check for Updates" button in Settings → Update Log — see the live updater status (checking, downloading, ready, error) instead of waiting for the silent background check</li>
+            <li>Update errors now surface as a toast instead of failing silently</li>
+            <li>Backgrounds now persist across app restarts — apply-state was kept in localStorage, but Electron picks a new random port each launch so the saved flag became invisible; state now lives in server-side config and migrates automatically on first launch</li>
+          </ul>
+        </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.5.8</div>

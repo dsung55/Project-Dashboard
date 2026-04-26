@@ -733,6 +733,45 @@ input[type="color"].form-input {
   color: #FFFFFF;
 }
 
+/* Error variant: same shape, red accent on the icon */
+#update-error-toast {
+  position:      fixed;
+  bottom:        28px;
+  right:         28px;
+  z-index:       10000;
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  background:    var(--text-primary);
+  color:         #FFFFFF;
+  padding:       14px 16px;
+  border-radius: 12px;
+  box-shadow:    0 6px 24px rgba(0,0,0,0.22);
+  max-width:     340px;
+}
+#update-error-toast .update-toast-icon {
+  background: rgba(255, 80, 80, 0.35);
+}
+
+/* ── Settings: manual updater controls ──────────────────────────────────────── */
+.updater-controls {
+  border:        1px solid var(--border-color);
+  border-radius: 10px;
+  padding:       16px 18px;
+  margin-bottom: 24px;
+  background:    var(--bg-secondary);
+}
+.updater-row {
+  display:     flex;
+  align-items: center;
+  gap:         14px;
+  flex-wrap:   wrap;
+}
+.updater-status {
+  flex: 1;
+  min-width: 200px;
+}
+
 /* ── Card: current task label ────────────────────────────────────────────────── */
 .current-task-label {
   font-weight: 600;

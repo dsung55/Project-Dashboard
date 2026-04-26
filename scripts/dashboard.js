@@ -156,7 +156,7 @@ function buildCard(project) {
   card.querySelector('.card-color-btn').style.background = project.color || '#4A90D9';
 
   // Apply per-project background image if one has been set in settings
-  if (localStorage.getItem('dashboardProjectBg_' + project.id)) {
+  if (project.bgApplied) {
     card.classList.add('has-card-bg');
     card.style.setProperty('--card-bg-image', `url('/api/projects/${project.id}/background?t=${Date.now()}')`);
   }

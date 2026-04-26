@@ -152,17 +152,18 @@ async function initCustomizations() {
   }
 }
 
-// Sync the global-bg upload zone to what is stored in localStorage
-function restoreGlobalBgUI() {
-  const stored = localStorage.getItem('dashboardGlobalBg');
-  const hasApplied = !!stored;
-  // Always show the preview if the server has an image — check by fetching HEAD
-  fetch('/api/backgrounds/global', { method: 'HEAD' })
-    .then(r => {
-      if (r.ok) showGlobalBgUI(true, hasApplied);
-      else       showGlobalBgUI(false, false);
-    })
-    .catch(() => showGlobalBgUI(false, false));
+// Sync the global-bg upload zone to the server-side config + image presence
+async function restoreGlobalBgUI() {
+  try {
+    const [headRes, config] = await Promise.all([
+      fetch('/api/backgrounds/global', { method: 'HEAD' }),
+      api.getConfig()
+    ]);
+    if (headRes.ok) showGlobalBgUI(true, !!config.globalBgApplied);
+    else            showGlobalBgUI(false, false);
+  } catch {
+    showGlobalBgUI(false, false);
+  }
 }
 
 // Show or hide the global-bg preview, apply checkbox, and remove button
@@ -218,11 +219,9 @@ function resizeImageToScreen(file) {
 async function handleGlobalBgUpload(file) {
   try {
     const resized = await resizeImageToScreen(file);
+    // Server sets globalBgApplied=true on upload, so the bg persists across app restarts
     await api.uploadGlobalBackground(resized);
-    // After upload, default to applied
-    const url = '/api/backgrounds/global?t=' + Date.now();
-    localStorage.setItem('dashboardGlobalBg', url);
-    api.applyGlobalBackground();
+    await api.applyGlobalBackground();
     showGlobalBgUI(true, true);
     showToast('Background uploaded and applied');
   } catch (err) {
@@ -233,7 +232,7 @@ async function handleGlobalBgUpload(file) {
 // Handle removing the global background
 async function handleRemoveGlobalBg() {
   try {
-    await api.removeGlobalBackground();  // also clears localStorage + unapplies
+    await api.removeGlobalBackground();
     showGlobalBgUI(false, false);
     showToast('Background removed');
   } catch (err) {
@@ -253,7 +252,8 @@ function renderProjectBgList(projects) {
 
   container.innerHTML = '';
   projects.forEach(project => {
-    const hasBg = !!localStorage.getItem('dashboardProjectBg_' + project.id);
+    // bgApplied lives in the projects index now (server-side), not localStorage
+    const hasBg = !!project.bgApplied;
     const item  = document.createElement('div');
     item.className = 'project-bg-item';
     item.dataset.id = project.id;
@@ -291,9 +291,8 @@ function renderProjectBgList(projects) {
       if (!file || !projectId) return;
       try {
         const resized = await resizeImageToScreen(file);
+        // Server sets bgApplied=true on upload — flag survives app restarts
         await api.uploadProjectBackground(projectId, resized);
-        const url = '/api/projects/' + projectId + '/background?t=' + Date.now();
-        localStorage.setItem('dashboardProjectBg_' + projectId, url);
         // Re-render to reflect the new state
         const projects = await api.getProjects();
         renderProjectBgList(projects);
@@ -364,15 +363,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Global background remove button
   document.getElementById('btn-remove-global-bg')?.addEventListener('click', handleRemoveGlobalBg);
 
-  // Apply-globally checkbox
-  document.getElementById('global-bg-apply-checkbox')?.addEventListener('change', (e) => {
-    if (e.target.checked) {
-      const url = '/api/backgrounds/global?t=' + Date.now();
-      localStorage.setItem('dashboardGlobalBg', url);
-    } else {
-      localStorage.removeItem('dashboardGlobalBg');
+  // Apply-globally checkbox — persists the toggle on the server so it survives restarts
+  document.getElementById('global-bg-apply-checkbox')?.addEventListener('change', async (e) => {
+    try {
+      const config = await api.getConfig();
+      config.globalBgApplied = !!e.target.checked;
+      await api.saveConfig(config);
+      await api.applyGlobalBackground();
+    } catch (err) {
+      showToast('Could not update background setting: ' + err.message, true);
     }
-    api.applyGlobalBackground();
   });
 });
 

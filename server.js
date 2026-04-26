@@ -66,8 +66,33 @@ function toIndexEntry(project) {
     currentTask:        currentTask,
     taskCount:          tasks.length,
     completedTaskCount: completed,
-    createdAt:          project.createdAt
+    createdAt:          project.createdAt,
+    bgApplied:          !!project.bgApplied
   };
+}
+
+// Persist the bgApplied flag on a project — writes both project.json and the index
+// so dashboard and settings can read it without loading the full project file.
+function setProjectBgApplied(id, applied) {
+  const projectFile = path.join(PROJECTS_DIR, id, 'project.json');
+  const project     = readJSON(projectFile);
+  if (project) {
+    project.bgApplied = applied;
+    writeJSON(projectFile, project);
+  }
+  const index = readJSON(PROJECTS_IDX, []);
+  if (Array.isArray(index)) {
+    const entry = index.find(p => p.id === id);
+    if (entry) {
+      entry.bgApplied = applied;
+      writeJSON(PROJECTS_IDX, index);
+    }
+  }
+}
+
+// Read config with a sensible default so we never lose existing fields when updating
+function readConfig() {
+  return readJSON(CONFIG_FILE, { phases: ['Planning', 'Planned', 'In Progress', 'Completed'] });
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -130,7 +155,15 @@ app.get('/api/projects', (_req, res) => {
     if (!project) return entry;
     const tasks       = project.tasks || [];
     const currentTask = tasks.find(t => !t.completed)?.text || null;
-    return { ...entry, currentTask, purpose: project.purpose || '' };
+    // Migration: derive bgApplied from disk if missing on either side, so the dashboard
+    // and settings list reflect existing backgrounds without needing a re-toggle.
+    let bgApplied = entry.bgApplied;
+    if (bgApplied === undefined) {
+      bgApplied = project.bgApplied !== undefined
+        ? project.bgApplied
+        : !!findBackground(path.join(PROJECTS_DIR, entry.id), 'background');
+    }
+    return { ...entry, currentTask, purpose: project.purpose || '', bgApplied };
   });
   res.json(projects);
 });
@@ -190,6 +223,11 @@ app.get('/api/projects/:id', (req, res) => {
   const filePath = path.join(PROJECTS_DIR, req.params.id, 'project.json');
   const project  = readJSON(filePath);
   if (!project) return res.status(404).json({ error: 'Project not found' });
+  // Migration: backfill bgApplied from disk presence so pre-1.5.9 backgrounds auto-restore
+  if (project.bgApplied === undefined) {
+    project.bgApplied = !!findBackground(path.join(PROJECTS_DIR, req.params.id), 'background');
+    writeJSON(filePath, project);
+  }
   res.json(project);
 });
 
@@ -257,7 +295,13 @@ app.get('/api/projects/:id/files/:filename', (req, res) => {
 
 // GET /api/config — return global config
 app.get('/api/config', (_req, res) => {
-  const config = readJSON(CONFIG_FILE, { phases: ['Planning', 'Planned', 'In Progress', 'Completed'] });
+  const config = readConfig();
+  // Migration: pre-1.5.9 users tracked apply-state in localStorage. If a background
+  // image is on disk but the flag is missing, default to applied so the bg auto-restores.
+  if (config.globalBgApplied === undefined) {
+    config.globalBgApplied = !!findBackground(BACKGROUNDS_DIR, 'global');
+    writeJSON(CONFIG_FILE, config);
+  }
   res.json(config);
 });
 
@@ -310,6 +354,11 @@ app.post('/api/backgrounds/global', (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
     cleanOldBackgrounds(BACKGROUNDS_DIR, 'global', ext);
+    // Persist apply-state server-side. localStorage isn't reliable in Electron because
+    // the server picks a new random port each launch, so origin (and its localStorage) changes.
+    const config = readConfig();
+    config.globalBgApplied = true;
+    writeJSON(CONFIG_FILE, config);
     res.json({ ok: true, url: '/api/backgrounds/global' });
   });
 });
@@ -326,6 +375,9 @@ app.get('/api/backgrounds/global', (_req, res) => {
 app.delete('/api/backgrounds/global', (_req, res) => {
   const found = findBackground(BACKGROUNDS_DIR, 'global');
   if (found) fs.unlinkSync(found);
+  const config = readConfig();
+  config.globalBgApplied = false;
+  writeJSON(CONFIG_FILE, config);
   res.json({ ok: true });
 });
 
@@ -336,6 +388,7 @@ app.post('/api/projects/:id/background', (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
     cleanOldBackgrounds(path.join(PROJECTS_DIR, req.params.id), 'background', ext);
+    setProjectBgApplied(req.params.id, true);
     res.json({ ok: true, url: '/api/projects/' + req.params.id + '/background' });
   });
 });
@@ -352,6 +405,7 @@ app.get('/api/projects/:id/background', (req, res) => {
 app.delete('/api/projects/:id/background', (req, res) => {
   const found = findBackground(path.join(PROJECTS_DIR, req.params.id), 'background');
   if (found) fs.unlinkSync(found);
+  setProjectBgApplied(req.params.id, false);
   res.json({ ok: true });
 });
 

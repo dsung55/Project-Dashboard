@@ -3,6 +3,15 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.5.9 — Auto-Update Reliability & Background Persistence
+
+- **Fixed: existing installs were silently failing every auto-update check.** `electron-builder` was generating a `latest.yml` whose download URL pointed to `project-dashboard-setup-x.y.z.exe`, but the installer was actually uploaded to GitHub under a different normalized name (`Project.Dashboard.Windows.exe`). `electron-updater` would fetch the YAML, hit the URL it named, get a 404, and fail silently — so users on v1.5.4 through v1.5.7 never saw the "Update ready" toast for newer versions. Renaming the NSIS artifact to a URL-safe `${name}-Setup-${version}.${ext}` template makes the file name, the upload name, and the URL inside `latest.yml` all match exactly.
+- **Updater is no longer silent on failure:** every check, download progress event, and error is now logged via `electron-log` to `%APPDATA%\Project Dashboard\logs\main.log`, and errors surface in the UI as a toast instead of disappearing.
+- **New "Check for Updates" button in Settings → Update Log:** kicks off an immediate check on demand and shows the live status (Checking… / Downloading X% / Update ready / On the latest version) without waiting for the silent 5-second startup check.
+- **`quitAndInstall` now uses `forceRunAfter=true`:** the new version actually launches automatically after the installer finishes, so users don't have to relaunch manually.
+- **Backgrounds now survive Electron restarts.** Apply-state for global and per-project backgrounds was kept in `localStorage`, which is keyed by origin — and Electron picks a new random port each launch, so the key changed every time and the saved flag was invisible. State now lives server-side in `config.json` (`globalBgApplied`) and the projects index (`bgApplied`) so backgrounds reliably re-apply after closing and reopening the app.
+- **Migration is automatic:** the server backfills the new flags from disk on first read, so anyone who already had a background image set sees it re-apply on launch without re-toggling anything.
+
 ## v1.5.8 — Backgrounds, Customizations Tab & Timeline Polish
 
 - **Global background image:** New Settings → Customizations → Global Background lets you upload a photo and apply it as the backdrop across every page. A frosted-glass blur sits over the image so cards, sections, and form inputs stay readable, and the effect adapts to dark mode automatically.

@@ -160,12 +160,11 @@ async function uploadGlobalBackground(file) {
   return res.json();
 }
 
-// Remove the global background image from server and localStorage
+// Remove the global background image (server clears its applied-flag too)
 async function removeGlobalBackground() {
   const res = await fetch('/api/backgrounds/global', { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to remove background');
-  localStorage.removeItem('dashboardGlobalBg');
-  applyGlobalBackground();
+  await applyGlobalBackground();
   return res.json();
 }
 
@@ -187,17 +186,24 @@ async function uploadProjectBackground(id, file) {
 async function removeProjectBackground(id) {
   const res = await fetch(`/api/projects/${id}/background`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to remove project background');
-  localStorage.removeItem('dashboardProjectBg_' + id);
   return res.json();
 }
 
 // ── Background application ────────────────────────────────────────────────────
+// Apply-state lives in config.json / project.json on the server, not localStorage.
+// localStorage is keyed by origin, and Electron picks a new random port each launch,
+// so anything stored there is invisible on the next launch.
 
-// Apply (or clear) the global background from localStorage on any page
-function applyGlobalBackground() {
-  const bg = localStorage.getItem('dashboardGlobalBg');
-  if (bg) {
-    document.documentElement.style.setProperty('--page-bg-image', `url('${bg}')`);
+// Apply (or clear) the global background based on the server-side flag
+async function applyGlobalBackground() {
+  let applied = false;
+  try {
+    const config = await getConfig();
+    applied = !!config.globalBgApplied;
+  } catch {}
+  if (applied) {
+    const url = '/api/backgrounds/global?t=' + Date.now();
+    document.documentElement.style.setProperty('--page-bg-image', `url('${url}')`);
     document.documentElement.classList.add('has-bg');
   } else {
     document.documentElement.style.removeProperty('--page-bg-image');
@@ -205,17 +211,27 @@ function applyGlobalBackground() {
   }
 }
 
-// Apply a project-specific background (overrides global on the project page)
-function applyProjectBackground(projectId) {
-  const bg = localStorage.getItem('dashboardProjectBg_' + projectId);
-  if (bg) {
-    document.documentElement.style.setProperty('--page-bg-image', `url('${bg}')`);
-    document.documentElement.classList.add('has-bg');
-  }
+// Apply a project-specific background (overrides global on the project page).
+// Falls back to the global background if this project has none of its own —
+// owning the fallback here avoids a race with the DOMContentLoaded auto-fire.
+async function applyProjectBackground(projectId) {
+  try {
+    const project = await getProject(projectId);
+    if (project && project.bgApplied) {
+      const url = `/api/projects/${projectId}/background?t=` + Date.now();
+      document.documentElement.style.setProperty('--page-bg-image', `url('${url}')`);
+      document.documentElement.classList.add('has-bg');
+      return;
+    }
+  } catch {}
+  await applyGlobalBackground();
 }
 
-// Auto-apply the global background on every page load
-document.addEventListener('DOMContentLoaded', applyGlobalBackground);
+// Auto-apply the global background on every page load — except on project pages,
+// where project.js calls applyProjectBackground (which handles fallback to global).
+document.addEventListener('DOMContentLoaded', () => {
+  if (!/project\.html$/i.test(location.pathname)) applyGlobalBackground();
+});
 
 // Expose all API functions on the global window.api object
 window.api = {
