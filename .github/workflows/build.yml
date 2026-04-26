@@ -5,15 +5,25 @@
 # and `latest.yml` locally — letting both pipelines write to the same release
 # corrupts the SHA-512 in `latest.yml` (different builds, same filenames).
 #
-# Run this workflow manually only when a Mac DMG is needed, or after deleting
-# the local-published release on GitHub so this is the sole publisher.
+# Use "mac" target to add a DMG to an already-published release without
+# touching the Windows installer or latest.yml.
+# Use "all" (default) only when building a release from scratch (no local publish).
 #
 # Uses the auto-provided GITHUB_TOKEN (no manual secret setup required).
 
 name: Build & Release
 
 on:
-  workflow_dispatch:    # manual run only — pick the tag/branch from the Actions UI
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'What to build and publish'
+        required: true
+        default: 'mac'
+        type: choice
+        options:
+          - mac
+          - all
 
 permissions:
   contents: write     # required to create/update GitHub Releases
@@ -22,6 +32,7 @@ jobs:
   build-windows:
     name: Windows (.exe installer)
     runs-on: windows-latest
+    if: ${{ inputs.target == 'all' }}
 
     steps:
       - name: Checkout code
@@ -84,6 +95,8 @@ jobs:
   publish:
     name: Attach to GitHub Release
     needs: [build-windows, build-mac]
+    # build-windows is skipped when target=mac; always() lets this job still run
+    if: always() && needs.build-mac.result == 'success'
     runs-on: ubuntu-latest
 
     permissions:
@@ -91,6 +104,7 @@ jobs:
 
     steps:
       - name: Download Windows artifacts
+        if: ${{ inputs.target == 'all' }}
         uses: actions/download-artifact@v4
         with:
           name: windows-build
@@ -105,7 +119,7 @@ jobs:
       - name: Create/update GitHub Release and attach files
         uses: softprops/action-gh-release@v2
         with:
-          # Uploads .exe, .dmg, latest.yml, latest-mac.yml.
+          # Uploads .dmg + latest-mac.yml (mac target), or all four files (all target).
           # The two YAMLs are what electron-updater reads to detect new versions.
           files: artifacts/**/*
           generate_release_notes: true
