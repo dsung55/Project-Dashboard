@@ -1,5 +1,5 @@
 // Electron main process — starts Express server, then opens the app window
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, net } = require('electron');
 const path = require('path');
 
 // Only allow one running instance — a second launch focuses the existing window
@@ -71,13 +71,74 @@ if (!app.requestSingleInstanceLock()) {
 
     // Track the last-known update state so the renderer can query it on demand
     // (e.g. after the user clicks "Check for Updates" in Settings).
-    let updateState = { status: 'idle', message: '', version: null };
+    // downloadUrl is set on macOS when a newer version is found but can't be
+    // auto-installed (no code signing), so the renderer shows a "Download" link.
+    let updateState = { status: 'idle', message: '', version: null, downloadUrl: null };
 
-    function setState(status, message, version) {
-      updateState = { status, message: message || '', version: version || null };
+    function setState(status, message, version, downloadUrl) {
+      updateState = { status, message: message || '', version: version || null, downloadUrl: downloadUrl || null };
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-status', updateState);
       }
+    }
+
+    // --- macOS fallback: electron-updater requires code signing on macOS. -----
+    // When it throws a signing error we fall back to checking the GitHub releases
+    // API directly. If a newer version exists we send 'update-available-download'
+    // so the renderer can show a "Download" toast with a link to the release page.
+    function compareVersions(a, b) {
+      const pa = String(a).split('.').map(Number);
+      const pb = String(b).split('.').map(Number);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const na = pa[i] || 0, nb = pb[i] || 0;
+        if (na > nb) return 1;
+        if (na < nb) return -1;
+      }
+      return 0;
+    }
+
+    function checkGitHubReleasesManually() {
+      setState('checking', 'Checking for updates…');
+      const request = net.request({
+        method: 'GET',
+        url: 'https://api.github.com/repos/dsung55/Project-Dashboard/releases/latest',
+        headers: { 'User-Agent': 'Project-Dashboard-App' },
+      });
+
+      request.on('response', (response) => {
+        let data = '';
+        response.on('data', (chunk) => { data += chunk; });
+        response.on('end', () => {
+          try {
+            const release = JSON.parse(data);
+            const latestVersion = release.tag_name.replace(/^v/, '');
+            const currentVersion = app.getVersion();
+            log.info(`[updater] GitHub check — current: ${currentVersion}, latest: ${latestVersion}`);
+
+            if (compareVersions(latestVersion, currentVersion) > 0) {
+              setState('available', `Update ${latestVersion} available — click to download.`, latestVersion, release.html_url);
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('update-available-download', {
+                  version: latestVersion,
+                  url: release.html_url,
+                });
+              }
+            } else {
+              setState('not-available', 'You are on the latest version.', currentVersion);
+            }
+          } catch (e) {
+            log.error('[updater] GitHub API parse error:', e);
+            setState('error', 'Could not parse update information.');
+          }
+        });
+      });
+
+      request.on('error', (err) => {
+        log.error('[updater] GitHub API request failed:', err);
+        setState('error', 'Could not reach update server.');
+      });
+
+      request.end();
     }
 
     autoUpdater.on('checking-for-update', () => setState('checking', 'Checking for updates…'));
@@ -93,27 +154,42 @@ if (!app.requestSingleInstanceLock()) {
       }
     });
 
-    // Surface errors instead of swallowing them — the renderer shows a toast
-    // so the user knows updates aren't silently broken anymore.
+    // Surface errors — on macOS a code-signing error is expected when the app is
+    // unsigned; fall back to the GitHub API check so Mac users still get notified.
     autoUpdater.on('error', (err) => {
       const message = (err && err.message) ? err.message : 'Unknown updater error';
       log.error('[updater] error:', err);
+
+      const isMacSigningError = process.platform === 'darwin' && (
+        message.includes('Could not get code signature') ||
+        message.includes('code signature') ||
+        message.includes('ENOENT') ||
+        message.includes('No published versions')
+      );
+
+      if (isMacSigningError) {
+        log.info('[updater] macOS signing error detected — falling back to GitHub API check');
+        checkGitHubReleasesManually();
+        return; // don't propagate as a user-visible error
+      }
+
       setState('error', message);
     });
 
     // Renderer's "Restart Now" button sends this — apply the downloaded update immediately.
-    // For NSIS oneClick=false builds, this still launches the interactive installer; the
-    // user clicks Next once and the update is applied.
     ipcMain.on('restart-app', () => {
       log.info('[updater] user requested restart-and-install');
       autoUpdater.quitAndInstall(false, true);
     });
 
-    // Renderer's "Check for Updates" button (Settings page) sends this — kicks
-    // off a fresh check on demand so the user doesn't have to wait for the
-    // 5-second startup check or restart the app.
+    // Renderer's "Check for Updates" button (Settings page).
+    // On macOS we skip electron-updater entirely and hit the GitHub API directly.
     ipcMain.on('check-for-updates', () => {
       log.info('[updater] manual check-for-updates requested');
+      if (process.platform === 'darwin') {
+        checkGitHubReleasesManually();
+        return;
+      }
       autoUpdater.checkForUpdates().catch((err) => {
         log.error('[updater] manual check failed:', err);
         setState('error', err && err.message ? err.message : 'Update check failed');
@@ -126,12 +202,23 @@ if (!app.requestSingleInstanceLock()) {
 
     // Wait 5 seconds after launch before the first check so startup feels instant.
     setTimeout(() => {
-      autoUpdater.checkForUpdates().catch((err) => {
-        log.error('[updater] startup check failed:', err);
-        setState('error', err && err.message ? err.message : 'Update check failed');
-      });
+      if (process.platform === 'darwin') {
+        checkGitHubReleasesManually();
+      } else {
+        autoUpdater.checkForUpdates().catch((err) => {
+          log.error('[updater] startup check failed:', err);
+          setState('error', err && err.message ? err.message : 'Update check failed');
+        });
+      }
     }, 5000);
   }
+
+  // Opens a URL in the system browser — used by the Mac "Download" toast button.
+  ipcMain.on('open-external', (_event, url) => {
+    if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'))) {
+      shell.openExternal(url);
+    }
+  });
 
   app.whenReady().then(() => {
     // Redirect data storage to the OS user-data folder so it is writable

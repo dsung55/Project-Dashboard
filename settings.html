@@ -130,6 +130,16 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.6.0</div>
+          <ul class="update-log-list">
+            <li>Mac update notifications — when a signing error blocks electron-updater on macOS, the app now falls back to the GitHub Releases API and shows a "Download" toast linking directly to the latest release</li>
+            <li>Update toast now reappears on every page navigation until you act on it — previously navigating away made it disappear permanently</li>
+            <li>"Check for Updates" on Mac now uses the GitHub API path instead of electron-updater, so it works correctly without code signing</li>
+            <li>Help tooltip "?" badge styling refined — white background with a border instead of a filled grey circle; improved dark mode appearance</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.5.9</div>
           <ul class="update-log-list">
             <li>Fixed: auto-update is now reliable — older builds shipped a latest.yml whose download URL didn't match the actual file uploaded to GitHub, so existing installs silently 404'd on every update check; installer filenames are now URL-safe and match the URL electron-updater reads</li>

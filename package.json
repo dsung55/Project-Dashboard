@@ -1,14 +1,15 @@
 {
   "name": "project-dashboard",
-  "version": "1.5.9",
+  "version": "1.6.0",
   "description": "Local project management dashboard",
   "main": "electron.js",
   "scripts": {
     "start": "node server.js",
     "electron": "node -e \"const {spawn}=require('child_process');spawn(require('electron'),['.'],{stdio:'inherit'})\"",
-    "dist": "electron-builder --win --publish never",
-    "dist:mac": "electron-builder --mac --publish never",
-    "release": "electron-builder --publish always"
+    "build-icons": "node scripts/generate-icons.js",
+    "dist": "npm run build-icons && electron-builder --win --publish never",
+    "dist:mac": "npm run build-icons && electron-builder --mac --publish never",
+    "release": "npm run build-icons && electron-builder --publish always"
   },
   "dependencies": {
     "electron-log": "^5.4.3",
@@ -18,14 +19,18 @@
   },
   "devDependencies": {
     "electron": "^41.3.0",
-    "electron-builder": "^26.8.1"
+    "electron-builder": "^26.8.1",
+    "png-to-ico": "^2.1.8",
+    "sharp": "^0.33.5"
   },
   "build": {
     "appId": "com.projectdashboard.app",
     "productName": "Project Dashboard",
     "asar": false,
+    "icon": "build/icon.png",
     "win": {
       "target": "nsis",
+      "icon": "build/icon.ico",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
@@ -45,6 +50,7 @@
           ]
         }
       ],
+      "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
       "artifactName": "Project Dashboard (Mac).${ext}"
     },

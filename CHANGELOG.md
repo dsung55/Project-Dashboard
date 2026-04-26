@@ -3,6 +3,13 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.0 — macOS Update Support & Toast Persistence
+
+- **macOS update notifications:** Macs can't auto-install unsigned builds via `electron-updater`. When a signing error is detected on macOS, the app now falls back to hitting the GitHub Releases API directly. If a newer version exists, a "Update available — click to Download" toast appears with a button that opens the GitHub releases page in the browser.
+- **Update toast persists across page navigation:** The update-ready and update-available toasts now reappear on every page load until the user acts on them. Previously the toast only fired once (when the IPC event arrived), so navigating away made it disappear permanently.
+- **"Check for Updates" on Mac skips electron-updater:** The manual check button in Settings → Update Log now uses the GitHub API path directly on macOS, so it works correctly without code signing.
+- **Help tooltip styling refined:** The "?" badge next to page titles now has a white background with a subtle border instead of a filled grey circle, and dark mode styling is improved.
+
 ## v1.5.9 — Auto-Update Reliability & Background Persistence
 
 - **Fixed: existing installs were silently failing every auto-update check.** `electron-builder` was generating a `latest.yml` whose download URL pointed to `project-dashboard-setup-x.y.z.exe`, but the installer was actually uploaded to GitHub under a different normalized name (`Project.Dashboard.Windows.exe`). `electron-updater` would fetch the YAML, hit the URL it named, get a 404, and fail silently — so users on v1.5.4 through v1.5.7 never saw the "Update ready" toast for newer versions. Renaming the NSIS artifact to a URL-safe `${name}-Setup-${version}.${ext}` template makes the file name, the upload name, and the URL inside `latest.yml` all match exactly.

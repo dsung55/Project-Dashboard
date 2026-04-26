@@ -1,11 +1,12 @@
 // Auto-update UX:
 //   - Toast appears bottom-right when an update is downloaded and ready
+//   - Toast re-appears on every page navigation until dismissed via X (never auto-hides)
 //   - "Check for Updates" button + live status row on Settings → Update Log
 // Only activates when running inside Electron (window.electronAPI is injected by preload.js).
 (function () {
   if (!window.electronAPI) return;
 
-  // --- "Update ready" toast -------------------------------------------------
+  // --- "Update ready" toast (Windows: downloads & installs automatically) ----
   function showUpdateReadyToast() {
     if (document.getElementById('update-toast')) return;
 
@@ -32,13 +33,62 @@
       window.electronAPI.restartApp();
     });
 
+    // Dismiss removes only the DOM element — on next page load the toast
+    // will reappear because the update state is still "downloaded".
     toast.querySelector('.update-toast-dismiss').addEventListener('click', () => {
       toast.classList.remove('update-toast-visible');
       toast.addEventListener('transitionend', () => toast.remove(), { once: true });
     });
   }
 
+  // --- "Update available — download" toast (Mac: opens GitHub releases page) -
+  function showUpdateAvailableToast(version, url) {
+    if (document.getElementById('update-toast')) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'update-toast';
+    toast.innerHTML = `
+      <div class="update-toast-body">
+        <div class="update-toast-icon">↑</div>
+        <div class="update-toast-text">
+          <strong>Update available</strong>
+          <span>Version ${version} is ready to download.</span>
+        </div>
+      </div>
+      <div class="update-toast-actions">
+        <button class="update-toast-restart">Download</button>
+        <button class="update-toast-dismiss" aria-label="Dismiss">✕</button>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('update-toast-visible'));
+
+    toast.querySelector('.update-toast-restart').addEventListener('click', () => {
+      window.electronAPI.openExternal(url);
+    });
+
+    toast.querySelector('.update-toast-dismiss').addEventListener('click', () => {
+      toast.classList.remove('update-toast-visible');
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    });
+  }
+
+  // On every page load, query the current update state from the main process.
+  // This ensures the toast reappears even after the user navigates between pages,
+  // because the IPC event "update-ready" only fires once (when download finishes).
+  window.electronAPI.getUpdateStatus().then((state) => {
+    if (!state) return;
+    if (state.status === 'downloaded') {
+      showUpdateReadyToast();
+    } else if (state.status === 'available' && state.downloadUrl) {
+      showUpdateAvailableToast(state.version, state.downloadUrl);
+    }
+  }).catch(() => {});
+
+  // Also listen for the event in case it fires while this page is already open
   window.electronAPI.onUpdateReady(() => showUpdateReadyToast());
+  window.electronAPI.onUpdateAvailableDownload(({ version, url }) => showUpdateAvailableToast(version, url));
 
   // --- Settings page updater controls --------------------------------------
   // Reveals the "Check for Updates" panel only inside Electron (the controls
@@ -56,8 +106,6 @@
       if (!state) return;
       statusEl.textContent = state.message || state.status || 'Idle.';
       btn.disabled = state.status === 'checking' || state.status === 'downloading';
-      // If we hit an error path, show a quick toast so users see it even if
-      // they never open Settings.
       if (state.status === 'error') showErrorToast(state.message);
     }
 
