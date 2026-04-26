@@ -24,6 +24,11 @@ on:
         options:
           - mac
           - all
+      tag:
+        description: 'GitHub release tag to attach assets to (e.g. v1.6.0)'
+        required: true
+        default: 'v1.6.0'
+        type: string
 
 permissions:
   contents: write     # required to create/update GitHub Releases
@@ -119,6 +124,7 @@ jobs:
       - name: Create/update GitHub Release and attach files
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
           # Uploads .dmg + latest-mac.yml (mac target), or all four files (all target).
           # The two YAMLs are what electron-updater reads to detect new versions.
           files: artifacts/**/*
