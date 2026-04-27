@@ -96,3 +96,11 @@ Add entries only when the user specifies a version number — auto-generate the 
 When the user asks to "push an update", "release a version", or "push to GitHub", always run `npm run release` — not just `git push`. This command builds the Windows installer and publishes it to GitHub Releases with a `latest.yml` file, which is what `electron-updater` reads to detect and download new versions in already-installed copies of the app.
 
 `git push` alone only updates source code and does NOT trigger auto-updates for existing users.
+
+After `npm run release` completes (Windows installer published), always also trigger the Mac DMG build by running:
+
+```
+gh workflow run build.yml -f target=mac -f tag=vX.Y.Z
+```
+
+This runs `.github/workflows/build.yml` on a GitHub-hosted Mac runner and attaches the `.dmg` + `latest-mac.yml` to the same release. Every release should have both the Windows `.exe` and the Mac `.dmg`.
