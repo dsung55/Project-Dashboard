@@ -179,7 +179,7 @@ if (!app.requestSingleInstanceLock()) {
     // Renderer's "Restart Now" button sends this — apply the downloaded update immediately.
     ipcMain.on('restart-app', () => {
       log.info('[updater] user requested restart-and-install');
-      autoUpdater.quitAndInstall(false, true);
+      autoUpdater.quitAndInstall(true, true);
     });
 
     // Renderer's "Check for Updates" button (Settings page).

@@ -3,6 +3,11 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.11 — Silent Auto-Update & Refreshed Icon
+
+- **Updates now install silently in the background** instead of opening the NSIS installer wizard on every release. The NSIS config switched from assisted mode (`oneClick: false`) to one-click mode (`oneClick: true`, `perMachine: false`), and `autoUpdater.quitAndInstall` now passes `isSilent=true` so the app quits, the new version is written in place, and the app relaunches automatically — no Next/Next/Install clicks required.
+- **Refreshed app icon:** Updated icon assets across the Windows installer, taskbar, title bar, and Mac DMG.
+
 ## v1.6.1 — New App Icon & Timeline Polish
 
 - **New app icon:** Updated the application icon across the Windows installer, taskbar, and title bar.
