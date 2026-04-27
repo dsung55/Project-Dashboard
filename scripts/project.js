@@ -1219,8 +1219,8 @@ let tlDragState = null; // { x, viewStart, viewEnd } while dragging, null otherw
 
 // Geometry constants shared by renderTimeline and repositionTimeline
 const TL_STEM_BASE  = 40; // minimum stem height in px
-const TL_LEVEL_STEP = 78; // additional px per collision level
-const TL_LABEL_H    = 52; // approximate label height in px
+const TL_LEVEL_STEP = 92; // additional px per collision level — must exceed max label height + gap
+const TL_LABEL_H    = 68; // approximate label height in px (accounts for 4-line wrapped text)
 const TL_EDGE_PAD   = 28; // breathing room above/below the outermost labels
 
 // Compute stem/level geometry scaled so the track fits within availH.
@@ -1655,7 +1655,9 @@ function repositionTimeline() {
     }
     el.style.display = '';
     el.style.left    = pct + '%';
-    el.style.top     = (baselineY + 5) + 'px';
+    // Edge-dot caps must be centered on the baseline; regular ticks sit just below it
+    const isEdgeDot = !!el.querySelector('.tl-edge-dot');
+    el.style.top = isEdgeDot ? (baselineY - 3) + 'px' : (baselineY + 5) + 'px';
     // January labels are always shown; other months shown based on step interval
     const isJan      = date.getMonth() === 0;
     const monthIndex = date.getFullYear() * 12 + date.getMonth();

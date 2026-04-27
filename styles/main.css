@@ -1449,8 +1449,10 @@ html.has-bg .project-section {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* Project cards: slightly more opaque than their parent section */
-html.has-bg .project-card {
+/* Project cards: slightly more opaque than their parent section.
+   Cards with their own background image are excluded — the background shorthand
+   would reset background-image and hide the per-project photo. */
+html.has-bg .project-card:not(.has-card-bg) {
   background:              rgba(255, 255, 255, 0.52);
   backdrop-filter:         blur(4px);
   -webkit-backdrop-filter: blur(4px);

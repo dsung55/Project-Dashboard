@@ -3,6 +3,13 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.1 — New App Icon & Timeline Polish
+
+- **New app icon:** Updated the application icon across the Windows installer, taskbar, and title bar.
+- **Fixed: timeline labels no longer overlap when tasks are tightly packed.** Collision-level spacing increased so even the tallest 4-line label has clearance above and below.
+- **Fixed: timeline edge-dot caps now sit centered on the baseline** instead of being offset below it like regular tick marks.
+- **Fixed: project cards with a custom background image are no longer affected by the global background's frosted-glass override,** which was resetting the card's `background-image` and hiding the per-project photo.
+
 ## v1.6.0 — macOS Update Support & Toast Persistence
 
 - **macOS update notifications:** Macs can't auto-install unsigned builds via `electron-updater`. When a signing error is detected on macOS, the app now falls back to hitting the GitHub Releases API directly. If a newer version exists, a "Update available — click to Download" toast appears with a button that opens the GitHub releases page in the browser.

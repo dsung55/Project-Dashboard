@@ -130,6 +130,16 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.6.1</div>
+          <ul class="update-log-list">
+            <li>New app icon — updated across the installer, taskbar, and title bar</li>
+            <li>Fixed: timeline labels no longer overlap when tasks are tightly packed — collision-level spacing increased to accommodate 4-line wrapped labels</li>
+            <li>Fixed: timeline edge-dot caps now sit centered on the baseline instead of offset below it like regular tick marks</li>
+            <li>Fixed: project cards with a custom background image no longer lose their photo when a global background is active — the frosted-glass override now skips cards that already have their own image</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.6.0</div>
           <ul class="update-log-list">
             <li>Mac update notifications — when a signing error blocks electron-updater on macOS, the app now falls back to the GitHub Releases API and shows a "Download" toast linking directly to the latest release</li>
