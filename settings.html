@@ -13,6 +13,8 @@
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         var dark = theme === 'dark' || (theme === 'system' && prefersDark);
         if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        var font = localStorage.getItem('dashboardFont') || 'system';
+        if (font && font !== 'system') document.documentElement.setAttribute('data-font', font);
       } catch(e) {}
     })();
   </script>
@@ -44,11 +46,11 @@
       </div>
 
       <!-- Customizations tab -->
-      <div class="settings-panel settings-section" id="tab-customizations" style="display:none">
+      <div class="settings-panel" id="tab-customizations" style="display:none">
 
         <div class="customizations-grid">
 
-          <!-- Left column: Appearance -->
+          <!-- Left column: Appearance + Font -->
           <div class="customizations-col">
             <div class="section-heading">Appearance</div>
             <div class="theme-toggle-group" id="theme-toggle">
@@ -56,7 +58,44 @@
               <button class="theme-toggle-btn" data-theme="system">System</button>
               <button class="theme-toggle-btn" data-theme="dark">Dark</button>
             </div>
+
+            <!-- Font subsection -->
+            <div class="section-heading font-section-heading">Font</div>
+            <p class="text-secondary text-sm font-section-desc">
+              Pick a font to use across the entire app.
+            </p>
+            <div class="font-dropdown" id="font-dropdown">
+              <button class="font-dropdown-trigger" id="font-dropdown-trigger" type="button">
+                <span id="font-dropdown-label">System Default</span>
+                <svg class="font-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="font-dropdown-menu" id="font-dropdown-menu">
+                <button class="font-option" data-font="system"    data-label="System Default" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">System Default</button>
+                <button class="font-option" data-font="inter"     data-label="Inter"          style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Inter</button>
+                <button class="font-option" data-font="helvetica" data-label="Helvetica Neue" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</button>
+                <button class="font-option" data-font="georgia"   data-label="Georgia"        style="font-family: Georgia, 'Times New Roman', serif">Georgia</button>
+                <button class="font-option" data-font="times"     data-label="Times New Roman"style="font-family: 'Times New Roman', Times, serif">Times New Roman</button>
+                <button class="font-option" data-font="garamond"  data-label="Garamond"       style="font-family: 'EB Garamond', Garamond, 'Times New Roman', serif">Garamond</button>
+                <button class="font-option" data-font="palatino"  data-label="Palatino"       style="font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</button>
+                <button class="font-option" data-font="courier"   data-label="Courier New"    style="font-family: 'Courier New', Courier, monospace">Courier New</button>
+                <button class="font-option" data-font="verdana"   data-label="Verdana"        style="font-family: Verdana, Geneva, sans-serif">Verdana</button>
+                <button class="font-option" data-font="trebuchet" data-label="Trebuchet MS"   style="font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif">Trebuchet MS</button>
+                <button class="font-option" data-font="tahoma"      data-label="Tahoma"         style="font-family: Tahoma, Geneva, sans-serif">Tahoma</button>
+                <button class="font-option" data-font="rounded"    data-label="SF Pro Rounded" style="font-family: 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif">SF Pro Rounded</button>
+                <button class="font-option font-option-divider" disabled>— Artistic &amp; Playful —</button>
+                <button class="font-option" data-font="baskerville" data-label="Baskerville"    style="font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Georgia, serif">Baskerville</button>
+                <button class="font-option" data-font="didot"       data-label="Didot"          style="font-family: Didot, 'Bodoni MT', 'Playfair Display', 'Times New Roman', serif">Didot</button>
+                <button class="font-option" data-font="futura"      data-label="Futura"         style="font-family: Futura, 'Century Gothic', 'Trebuchet MS', sans-serif">Futura</button>
+                <button class="font-option" data-font="rockwell"    data-label="Rockwell"       style="font-family: Rockwell, 'Rockwell Extra Bold', 'Courier Bold', serif">Rockwell</button>
+                <button class="font-option" data-font="comic"       data-label="Comic Sans"     style="font-family: 'Comic Sans MS', 'Comic Sans', cursive">Comic Sans</button>
+                <button class="font-option" data-font="impact"      data-label="Impact"         style="font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif">Impact</button>
+                <button class="font-option" data-font="handwriting" data-label="Handwriting"    style="font-family: 'Segoe Script', 'Brush Script MT', 'Bradley Hand', cursive">Handwriting</button>
+              </div>
+            </div>
           </div>
+
+          <!-- Vertical divider between Appearance and Backgrounds -->
+          <div class="customizations-divider" aria-hidden="true"></div>
 
           <!-- Right column: Global Background + Project Backgrounds -->
           <div class="customizations-col customizations-col--bg">
@@ -128,6 +167,16 @@
         </div>
 
         <div class="section-heading">Update Log</div>
+
+        <div class="update-log-entry">
+          <div class="update-log-version">v1.6.12</div>
+          <ul class="update-log-list">
+            <li>New Font setting in Settings → Customizations — pick from 18 fonts to apply across the entire app, persisted across restarts</li>
+            <li>Fixed: timeline baseline no longer drops out of view when many label levels stack up — levels now compress to fit the available height</li>
+            <li>Cleaner first-install example project — 7 tasks instead of 21 so the Timeline looks tidy on first open</li>
+            <li>Settings → Customizations now has a thin vertical divider between the Appearance and Backgrounds columns</li>
+          </ul>
+        </div>
 
         <div class="update-log-entry">
           <div class="update-log-version">v1.6.11</div>

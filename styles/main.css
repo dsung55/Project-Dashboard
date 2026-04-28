@@ -20,6 +20,121 @@
   --blue:               #007AFF;
 }
 
+/* Global font overrides — applied when data-font="..." is on <html>.
+   Each option ends with the system fallback so missing fonts degrade gracefully. */
+[data-font="inter"]     { --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+[data-font="helvetica"] { --font: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+[data-font="georgia"]   { --font: Georgia, "Times New Roman", serif; }
+[data-font="times"]     { --font: "Times New Roman", Times, serif; }
+[data-font="garamond"]  { --font: "EB Garamond", Garamond, "Times New Roman", serif; }
+[data-font="palatino"]  { --font: "Palatino Linotype", "Book Antiqua", Palatino, serif; }
+[data-font="courier"]   { --font: "Courier New", Courier, monospace; }
+[data-font="verdana"]   { --font: Verdana, Geneva, sans-serif; }
+[data-font="trebuchet"] { --font: "Trebuchet MS", "Lucida Sans Unicode", sans-serif; }
+[data-font="tahoma"]    { --font: Tahoma, Geneva, sans-serif; }
+[data-font="rounded"]   { --font: "SF Pro Rounded", "Segoe UI", system-ui, sans-serif; }
+[data-font="baskerville"] { --font: Baskerville, "Baskerville Old Face", "Hoefler Text", Georgia, serif; }
+[data-font="didot"]       { --font: Didot, "Bodoni MT", "Playfair Display", "Times New Roman", serif; }
+[data-font="futura"]      { --font: Futura, "Century Gothic", "Trebuchet MS", sans-serif; }
+[data-font="rockwell"]    { --font: Rockwell, "Rockwell Extra Bold", "Courier Bold", serif; }
+[data-font="comic"]       { --font: "Comic Sans MS", "Comic Sans", cursive; }
+[data-font="impact"]      { --font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; }
+[data-font="handwriting"] { --font: "Segoe Script", "Brush Script MT", "Bradley Hand", cursive; }
+
+/* ── Font subsection in the Customizations tab ───────────────────────────── */
+.font-section-heading { margin-top: 32px; }
+.font-section-desc    { margin-bottom: 12px; line-height: 1.6; }
+
+/* ── Font dropdown (settings page) ───────────────────────────────────────── */
+.font-dropdown {
+  position: relative;
+  width:    220px;
+}
+
+.font-dropdown-trigger {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  width:           100%;
+  padding:         9px 14px;
+  font-size:       14px;
+  font-family:     var(--font);
+  border:          1px solid var(--border-color);
+  border-radius:   10px;
+  background:      var(--bg-primary);
+  color:           var(--text-primary);
+  cursor:          pointer;
+  transition:      border-color var(--transition), box-shadow var(--transition);
+}
+
+.font-dropdown-trigger:focus {
+  outline:      none;
+  border-color: var(--blue);
+  box-shadow:   0 0 0 3px rgba(0,102,204,0.15);
+}
+
+.font-dropdown-chevron {
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition:  transform 150ms ease;
+}
+
+.font-dropdown.open .font-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+.font-dropdown-menu {
+  display:          none;
+  position:         absolute;
+  top:              calc(100% + 6px);
+  left:             0;
+  width:            100%;
+  background:       var(--bg-primary);
+  border:           1px solid var(--border-color);
+  border-radius:    10px;
+  box-shadow:       0 8px 24px rgba(0,0,0,0.10);
+  overflow-y:       auto;
+  max-height:       260px;
+  z-index:          200;
+}
+
+.font-dropdown.open .font-dropdown-menu {
+  display: block;
+}
+
+.font-option {
+  display:     block;
+  width:       100%;
+  padding:     9px 14px;
+  font-size:   14px;
+  text-align:  left;
+  border:      none;
+  background:  transparent;
+  color:       var(--text-primary);
+  cursor:      pointer;
+  transition:  background var(--transition);
+}
+
+.font-option:hover {
+  background: var(--bg-secondary);
+}
+
+.font-option.active {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.font-option-divider {
+  font-size:      11px;
+  font-family:    var(--font) !important;
+  color:          var(--text-secondary) !important;
+  letter-spacing: 0.4px;
+  padding:        6px 14px 4px;
+  cursor:         default !important;
+  pointer-events: none;
+  background:     transparent !important;
+}
+
 /* Dark theme token overrides — applied when data-theme="dark" is on <html> */
 [data-theme="dark"] {
   --bg-primary:         #1C1C1E;
@@ -1528,11 +1643,11 @@ html[data-theme="dark"].has-bg .section-heading {
 
 /* ── Customizations tab UI ───────────────────────────────────────────────────── */
 
-/* Two-column layout: Appearance left, Background options right */
+/* Three-column layout: Appearance left, thin divider, Background options right */
 .customizations-grid {
   display:               grid;
-  grid-template-columns: auto 1fr;
-  gap:                   0 56px;
+  grid-template-columns: 280px 1px 1fr;
+  gap:                   0 40px;
   align-items:           start;
   max-width:             1100px;
 }
@@ -1541,27 +1656,40 @@ html[data-theme="dark"].has-bg .section-heading {
   min-width: 0;
 }
 
-/* Right (backgrounds) column — center headings and descriptions, keep list rows full-width */
+/* Thin vertical divider between the Appearance and Backgrounds columns —
+   stretches to match the height of the tallest column for visual clarity */
+.customizations-divider {
+  width:       1px;
+  background:  var(--border-color);
+  align-self:  stretch;
+}
+
+/* Right (backgrounds) column — all content centered as a block within the column */
 .customizations-col--bg {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  text-align:     left;
+}
+
+.customizations-col--bg .section-heading,
+.customizations-col--bg > p {
   text-align: center;
+  width:      100%;
 }
 
-.customizations-col--bg .bg-upload-zone {
-  justify-content: center;
-}
-
-/* Project background list rows stay left-aligned internally (name left, buttons right) */
-.customizations-col--bg .project-bg-item,
-.customizations-col--bg .project-bg-item-name {
-  text-align: left;
+.customizations-col--bg .bg-upload-zone,
+.customizations-col--bg .project-bg-list {
+  width: 100%;
 }
 
 /* Background upload zone */
 .bg-upload-zone {
-  display:       flex;
-  align-items:   center;
-  gap:           16px;
-  flex-wrap:     wrap;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             16px;
+  flex-wrap:       wrap;
 }
 
 .bg-preview-wrap {

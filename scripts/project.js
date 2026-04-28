@@ -1238,6 +1238,19 @@ function computeTlGeometry(maxAbove, maxBelow, availH) {
     const scale = availH / rawH;
     stemBase  = Math.max(14, Math.round(TL_STEM_BASE  * scale));
     levelStep = Math.max(TL_LABEL_H + 4, Math.round(TL_LEVEL_STEP * scale));
+
+    // The clamp above (TL_LABEL_H + 4) reserves full clearance per level, but
+    // when many levels exist (heavy clustering) it also blocks further shrinkage
+    // and the track ends up taller than availH — pushing the baseline below the
+    // viewport so the user sees only stacked labels with no horizontal axis.
+    // Solve for the exact levelStep that fits the remaining vertical space and
+    // accept some label overlap (still readable, labels paint top-to-bottom).
+    const totalLevels = maxAbove + maxBelow;
+    if (totalLevels > 0) {
+      const fixedH = (TL_EDGE_PAD + TL_LABEL_H) * 2 + stemBase * 2 + 4;
+      const fitStep = Math.floor((availH - fixedH) / totalLevels);
+      if (fitStep < levelStep) levelStep = Math.max(28, fitStep);
+    }
   }
 
   const aboveH    = TL_EDGE_PAD + TL_LABEL_H + stemBase + maxAbove * levelStep;

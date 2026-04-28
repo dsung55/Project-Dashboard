@@ -3,6 +3,13 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.12 — Custom Font & Timeline Fit
+
+- **New Font setting in Settings → Customizations:** pick from 18 fonts (system, Inter, Helvetica, Georgia, Garamond, SF Pro Rounded, Comic Sans, and more) to apply across the entire app. The choice persists to `config.json` and is restored without flash on every page load.
+- **Fixed: timeline baseline no longer drops out of view when many label levels stack up.** When clustering forced more vertical space than the panel could fit, the level-step clamp blocked further shrinkage and pushed the horizontal axis below the viewport. Levels now compress to the available height while staying readable.
+- **Cleaner first-install example project:** the demo project now ships with 7 tasks instead of 21, so the Timeline view looks tidy on first open.
+- **Settings → Customizations layout polish:** thin vertical divider between the Appearance and Backgrounds columns.
+
 ## v1.6.11 — Silent Auto-Update & Refreshed Icon
 
 - **Updates now install silently in the background** instead of opening the NSIS installer wizard on every release. The NSIS config switched from assisted mode (`oneClick: false`) to one-click mode (`oneClick: true`, `perMachine: false`), and `autoUpdater.quitAndInstall` now passes `isSilent=true` so the app quits, the new version is written in place, and the app relaunches automatically — no Next/Next/Install clicks required.

@@ -13,6 +13,8 @@
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         var dark = theme === 'dark' || (theme === 'system' && prefersDark);
         if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        var font = localStorage.getItem('dashboardFont') || 'system';
+        if (font && font !== 'system') document.documentElement.setAttribute('data-font', font);
       } catch(e) {}
     })();
   </script>

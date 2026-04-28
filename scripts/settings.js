@@ -12,6 +12,7 @@ async function init() {
     phases = config.phases || [];
     renderPhaseList();
     renderThemeToggle(config.theme || 'system');
+    renderFontSelect(config.font || 'system');
   } catch (err) {
     showToast('Could not load settings: ' + err.message, true);
   }
@@ -135,6 +136,38 @@ async function handleThemeChange(theme) {
     renderThemeToggle(theme);
   } catch (err) {
     showToast('Could not save theme: ' + err.message, true);
+  }
+}
+
+// ── Font ──────────────────────────────────────────────────────────────────────
+
+// Highlight the active font in the dropdown and update the trigger label
+function renderFontSelect(activeFont) {
+  document.querySelectorAll('.font-option').forEach(btn => {
+    const isActive = btn.dataset.font === activeFont;
+    btn.classList.toggle('active', isActive);
+    if (isActive) {
+      const label = document.getElementById('font-dropdown-label');
+      if (label) label.textContent = btn.dataset.label;
+    }
+  });
+}
+
+// Apply a font globally, persist it to localStorage and config.json
+async function handleFontChange(font) {
+  // Apply immediately on this page
+  if (!font || font === 'system') document.documentElement.removeAttribute('data-font');
+  else                            document.documentElement.setAttribute('data-font', font);
+
+  // Mirror to localStorage so other pages apply it without a flash on load
+  localStorage.setItem('dashboardFont', font);
+
+  // Persist to config.json
+  try {
+    const config = await api.getConfig();
+    await api.saveConfig({ ...config, font });
+  } catch (err) {
+    showToast('Could not save font: ' + err.message, true);
   }
 }
 
@@ -333,6 +366,26 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => handleThemeChange(btn.dataset.theme));
   });
+
+  // Font dropdown — toggle open/close on trigger click
+  const fontDropdown = document.getElementById('font-dropdown');
+  const fontTrigger  = document.getElementById('font-dropdown-trigger');
+  fontTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fontDropdown.classList.toggle('open');
+  });
+
+  // Font dropdown — select an option
+  document.querySelectorAll('.font-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      handleFontChange(btn.dataset.font);
+      renderFontSelect(btn.dataset.font);
+      fontDropdown.classList.remove('open');
+    });
+  });
+
+  // Font dropdown — close when clicking outside
+  document.addEventListener('click', () => fontDropdown?.classList.remove('open'));
 
   // Sub-tab switching
   document.querySelectorAll('.settings-tab').forEach(tab => {

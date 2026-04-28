@@ -12,6 +12,7 @@ Target user is non-technical — keep explanations clear, code well-commented. D
 
 - **Frontend:** Vanilla HTML/CSS/JS — no framework, no build step, no CDN
 - **Backend:** Node.js + Express (`server.js` only)
+- **Desktop wrapper:** Electron (`electron.js`) — desktop app is the primary surface; assume bug reports are Electron-context unless stated otherwise
 - **Storage:** Local JSON files under `/data/`
 - **OS:** Windows — `path.join()` everywhere, never hardcode `/`
 - **Dependencies:** Express, Multer only — must run fully offline after `npm install`
@@ -89,7 +90,7 @@ Each task: `id, text, completed, completedAt, notes, subItems[]`
 ## Versioning
 
 Version history lives in `CHANGELOG.md` and in Settings → Update Log in `settings.html`.
-Add entries only when the user specifies a version number — auto-generate the content.
+Add entries only when the user specifies a version number — auto-generate the content. Keep entries to 2–4 bullets covering only the most notable changes; do not list every minor fix.
 
 ## Releasing Updates
 

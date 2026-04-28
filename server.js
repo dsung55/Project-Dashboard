@@ -426,43 +426,27 @@ function toDateObj(d) {
 
 // Builds the example project with all dates computed relative to today so they
 // always look realistic regardless of when the app is first installed.
-// Completed tasks span from ~1 year ago up to recently; incomplete tasks have
-// due dates spread from near-term out to ~1 year in the future.
+// A handful of completed tasks span the past year and a handful of incomplete
+// tasks are spread out across the next ~5 months, so the timeline view stays
+// uncluttered on first install.
 function buildExampleProject() {
   const now = new Date();
 
   // completedAt values (ISO strings — sorted newest-first in the UI)
-  const c1 = daysFrom(now, -365, 9,  15).toISOString();  // ~1 year ago
-  const c2 = daysFrom(now, -330, 16,  0).toISOString();  // ~11 months ago
-  const c3 = daysFrom(now, -300, 14, 30).toISOString();  // ~10 months ago
-  const c4 = daysFrom(now, -240, 11,  0).toISOString();  // ~8 months ago
-  const c5 = daysFrom(now, -180, 20,  0).toISOString();  // ~6 months ago
-  const c6 = daysFrom(now, -150,  9,  0).toISOString();  // ~5 months ago
-  const c7 = daysFrom(now, -120,  8,  0).toISOString();  // ~4 months ago
-  const c8 = daysFrom(now,  -75, 12,  0).toISOString();  // ~2.5 months ago
-  const c9 = daysFrom(now,  -30,  7, 45).toISOString();  // ~1 month ago
+  const c1 = daysFrom(now, -300, 14, 30).toISOString();  // ~10 months ago
+  const c2 = daysFrom(now, -180, 20,  0).toISOString();  // ~6 months ago
+  const c3 = daysFrom(now,  -60,  9,  0).toISOString();  // ~2 months ago
 
   // dueDate values for completed tasks (set a few days before their completedAt)
-  const cd1 = toDateObj(daysFrom(now, -370,  0,  0));  // due before task-001 completion
-  const cd2 = toDateObj(daysFrom(now, -335,  0,  0));  // due before task-002 completion
-  const cd3 = toDateObj(daysFrom(now, -305,  0,  0));  // due before task-003 completion
-  const cd4 = toDateObj(daysFrom(now, -245,  0,  0));  // due before task-004 completion
-  const cd5 = toDateObj(daysFrom(now, -185,  0,  0));  // due before task-005 completion
-  const cd6 = toDateObj(daysFrom(now, -155,  0,  0));  // due before task-006 completion
+  const cd1 = toDateObj(daysFrom(now, -305,  0,  0));  // due before task-001 completion
+  const cd2 = toDateObj(daysFrom(now, -185,  0,  0));  // due before task-002 completion
+  const cd3 = toDateObj(daysFrom(now,  -65,  0,  0));  // due before task-003 completion
 
-  // dueDate values ({ month, day, year } — spread from near-term to ~6 months out)
-  const d1  = toDateObj(daysFrom(now,    3,  0,  0));  // ~3 days out
-  const d2  = toDateObj(daysFrom(now,    5,  0,  0));  // ~5 days out
-  const d3  = toDateObj(daysFrom(now,   11,  0,  0));  // ~1.5 weeks out
-  const d4  = toDateObj(daysFrom(now,   18,  0,  0));  // ~2.5 weeks out
-  const d5  = toDateObj(daysFrom(now,   28,  0,  0));  // ~1 month out
-  const d6  = toDateObj(daysFrom(now,   40,  0,  0));  // ~6 weeks out
-  const d7  = toDateObj(daysFrom(now,   54,  0,  0));  // ~8 weeks out
-  const d8  = toDateObj(daysFrom(now,   70,  0,  0));  // ~10 weeks out
-  const d9  = toDateObj(daysFrom(now,   89,  0,  0));  // ~3 months out
-  const d10 = toDateObj(daysFrom(now,  115,  0,  0));  // ~4 months out
-  const d11 = toDateObj(daysFrom(now,  145,  0,  0));  // ~5 months out
-  const d12 = toDateObj(daysFrom(now,  176,  0,  0));  // ~6 months out
+  // dueDate values for incomplete tasks ({ month, day, year } — spread out so the timeline isn't cluttered)
+  const d1 = toDateObj(daysFrom(now,   14,  0,  0));  // ~2 weeks out
+  const d2 = toDateObj(daysFrom(now,   45,  0,  0));  // ~6 weeks out
+  const d3 = toDateObj(daysFrom(now,   90,  0,  0));  // ~3 months out
+  const d4 = toDateObj(daysFrom(now,  150,  0,  0));  // ~5 months out
 
   return {
     id: '00000000-0000-0000-0000-000000000001',
@@ -478,73 +462,26 @@ function buildExampleProject() {
     tasks: [
       // ── Incomplete (with due dates — appear on the timeline) ────────────────
       {
-        id: 'ex-task-010', text: 'Track daily water intake (target: 3L per day)',
+        id: 'ex-task-010', text: 'Plan and prep meals every Sunday for the week ahead',
         completed: false, completedAt: null, notes: '', dueDate: d1,
-        subItems: []
-      },
-      {
-        id: 'ex-task-011', text: 'Plan and prep meals every Sunday for the week ahead',
-        completed: false, completedAt: null, notes: '', dueDate: d2,
         subItems: [
-          { id: 'ex-sub-011a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: d2 },
-          { id: 'ex-sub-011b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: d2 }
+          { id: 'ex-sub-010a', text: 'Write out 5 dinners and their macros', completed: false, dueDate: null },
+          { id: 'ex-sub-010b', text: 'Batch cook grains and proteins for the week', completed: false, dueDate: null }
         ]
       },
       {
-        id: 'ex-task-012', text: 'Define cheat meal rules and frequency',
+        id: 'ex-task-011', text: 'Complete 30-day progress review and adjust targets',
+        completed: false, completedAt: null, notes: '', dueDate: d2,
+        subItems: []
+      },
+      {
+        id: 'ex-task-012', text: 'Take 3-month progress photos and measurements',
         completed: false, completedAt: null, notes: '', dueDate: d3,
         subItems: []
       },
       {
-        id: 'ex-task-013', text: 'Research healthy restaurant options near the office',
+        id: 'ex-task-013', text: 'Set next-phase goals and adjust macros for maintenance',
         completed: false, completedAt: null, notes: '', dueDate: d4,
-        subItems: [
-          { id: 'ex-sub-013a', text: 'Find 3 lunch spots that publish nutrition info', completed: false, dueDate: d4 },
-          { id: 'ex-sub-013b', text: 'Identify the safest menu items at each spot', completed: false, dueDate: d4 },
-          { id: 'ex-sub-013c', text: 'Set a 700 cal max for any eating-out lunch', completed: false, dueDate: d4 }
-        ]
-      },
-      {
-        id: 'ex-task-014', text: 'Complete 30-day progress review and adjust targets',
-        completed: false, completedAt: null, notes: '', dueDate: d5,
-        subItems: []
-      },
-      {
-        id: 'ex-task-015', text: 'Incorporate 30 minutes of light exercise 3x per week',
-        completed: false, completedAt: null, notes: '', dueDate: d6,
-        subItems: []
-      },
-      {
-        id: 'ex-task-016', text: 'Try a 2-week intermittent fasting (16:8) experiment',
-        completed: false, completedAt: null, notes: '', dueDate: d7,
-        subItems: [
-          { id: 'ex-sub-016a', text: 'Pick an eating window (12pm–8pm)', completed: false, dueDate: d7 },
-          { id: 'ex-sub-016b', text: 'Track energy levels and hunger through the trial', completed: false, dueDate: d7 }
-        ]
-      },
-      {
-        id: 'ex-task-017', text: 'Take 3-month progress photos and measurements',
-        completed: false, completedAt: null, notes: '', dueDate: d8,
-        subItems: []
-      },
-      {
-        id: 'ex-task-018', text: 'Complete full 90-day diet challenge and debrief',
-        completed: false, completedAt: null, notes: '', dueDate: d9,
-        subItems: []
-      },
-      {
-        id: 'ex-task-019', text: 'Plan summer BBQ and social-eating strategies',
-        completed: false, completedAt: null, notes: '', dueDate: d10,
-        subItems: []
-      },
-      {
-        id: 'ex-task-020', text: 'Set next-phase goals and adjust macros for maintenance',
-        completed: false, completedAt: null, notes: '', dueDate: d11,
-        subItems: []
-      },
-      {
-        id: 'ex-task-021', text: 'Complete 6-month full progress review',
-        completed: false, completedAt: null, notes: '', dueDate: d12,
         subItems: []
       },
       // ── Completed ───────────────────────────────────────────────────────────
@@ -557,35 +494,16 @@ function buildExampleProject() {
         ]
       },
       {
-        id: 'ex-task-002', text: 'Take starting photos and body measurements',
+        id: 'ex-task-002', text: 'Set up a weekly weigh-in routine',
         completed: true, completedAt: c2, notes: '', dueDate: cd2,
-        subItems: []
+        subItems: [
+          { id: 'ex-sub-002a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
+          { id: 'ex-sub-002b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
+        ]
       },
       {
-        id: 'ex-task-003', text: 'Build a weekly grocery list template',
+        id: 'ex-task-003', text: 'Identify go-to high-protein breakfast options',
         completed: true, completedAt: c3, notes: '', dueDate: cd3,
-        subItems: [
-          { id: 'ex-sub-003a', text: 'List lean protein sources', completed: true, dueDate: null },
-          { id: 'ex-sub-003b', text: 'List vegetables and fruits for the week', completed: true, dueDate: null },
-          { id: 'ex-sub-003c', text: 'List pantry staples to always keep stocked', completed: true, dueDate: null }
-        ]
-      },
-      {
-        id: 'ex-task-004', text: 'Log every meal for the first two weeks',
-        completed: true, completedAt: c4, notes: '', dueDate: cd4,
-        subItems: []
-      },
-      {
-        id: 'ex-task-005', text: 'Set up a weekly weigh-in routine',
-        completed: true, completedAt: c5, notes: '', dueDate: cd5,
-        subItems: [
-          { id: 'ex-sub-005a', text: 'Pick a consistent day and time (Sunday morning)', completed: true, dueDate: null },
-          { id: 'ex-sub-005b', text: 'Create a spreadsheet to log weekly results', completed: true, dueDate: null }
-        ]
-      },
-      {
-        id: 'ex-task-006', text: 'Identify go-to high-protein breakfast options',
-        completed: true, completedAt: c6, notes: '', dueDate: cd6,
         subItems: []
       }
     ]
