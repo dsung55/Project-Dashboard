@@ -1,9 +1,11 @@
 // tasks.js — Global (miscellaneous) tasks page logic
-// Handles: add, delete, complete/uncomplete, drag-to-reorder, pop-in animation
+// Handles: add, edit (dbl-click), delete, complete/uncomplete, archive/unarchive,
+//          drag-to-reorder, pop-in animation
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let tasks = [];          // full array of task objects { id, text, completed, createdAt }
-let savePending = false; // debounce guard for save calls
+let tasks = [];                 // full array of task objects { id, text, completed, archived, createdAt }
+let savePending      = false;   // debounce guard for save calls
+let archivedExpanded = false;   // whether the "Archived (n)" section is open
 
 // Drag state
 let draggedId      = null;  // id of the task being dragged
@@ -44,9 +46,11 @@ function renderList(animate) {
     return;
   }
 
-  // Split into active and completed; keep original order within each group
-  const active    = tasks.filter(t => !t.completed);
-  const completed = tasks.filter(t =>  t.completed);
+  // Partition: archived tasks live in their own collapsible section at the bottom
+  const archived  = tasks.filter(t =>  t.archived);
+  const visible   = tasks.filter(t => !t.archived);
+  const active    = visible.filter(t => !t.completed);
+  const completed = visible.filter(t =>  t.completed);
 
   // Precompute all delays in one O(n) pass instead of O(n²) per-item calls
   const delays = animate ? buildCumulativeDelays(active.length + completed.length) : null;
@@ -76,6 +80,14 @@ function renderList(animate) {
     list.appendChild(item);
   });
 
+  // Archived section — only present when at least one task is archived
+  if (archived.length > 0) {
+    list.appendChild(buildArchiveToggle(archived.length));
+    if (archivedExpanded) {
+      archived.forEach(task => list.appendChild(buildArchivedItem(task)));
+    }
+  }
+
   initDragAndDrop();
 }
 
@@ -98,15 +110,37 @@ function buildItem(task) {
   li.dataset.id = task.id;
   li.setAttribute('draggable', 'true');
 
+  // Archive button is only offered for completed tasks — its purpose is to tuck
+  // finished work away rather than to park active items
+  const archiveBtnHtml = task.completed
+    ? `<button class="gt-icon-btn gt-archive-btn" data-id="${task.id}" title="Archive task">
+         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <rect x="2.5" y="4" width="19" height="5" rx="1"></rect>
+           <path d="M4.5 9v10.5h15V9"></path>
+           <path d="M10 13h4"></path>
+         </svg>
+       </button>`
+    : '';
+
   li.innerHTML = `
     <span class="gt-drag-handle" title="Drag to reorder">⠿</span>
     <div class="gt-checkbox${task.completed ? ' checked' : ''}" data-id="${task.id}" title="${task.completed ? 'Mark incomplete' : 'Mark complete'}"></div>
-    <span class="gt-text">${escapeHtml(task.text)}</span>
+    <span class="gt-text" title="Double-click to edit">${escapeHtml(task.text)}</span>
+    ${archiveBtnHtml}
     <button class="gt-delete-btn" data-id="${task.id}" title="Delete task">&#x2715;</button>
   `;
 
   // Checkbox toggles completion
   li.querySelector('.gt-checkbox').addEventListener('click', () => toggleComplete(task.id));
+
+  // Archive button (only present for completed tasks)
+  const archiveBtn = li.querySelector('.gt-archive-btn');
+  if (archiveBtn) {
+    archiveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      archiveTask(task.id);
+    });
+  }
 
   // Delete button removes the task
   li.querySelector('.gt-delete-btn').addEventListener('click', (e) => {
@@ -114,7 +148,100 @@ function buildItem(task) {
     deleteTask(task.id);
   });
 
+  // Double-click the text to edit it inline
+  const textSpan = li.querySelector('.gt-text');
+  textSpan.addEventListener('dblclick', () => startEdit(task, textSpan, li));
+
   return li;
+}
+
+// Build the "Archived (n)" toggle row that opens/closes the archived section
+function buildArchiveToggle(count) {
+  const li = document.createElement('li');
+  li.className = 'gt-archive-toggle' + (archivedExpanded ? ' expanded' : '');
+  li.innerHTML = `
+    <span class="gt-archive-caret">&#x25B8;</span>
+    <span class="gt-archive-toggle-label">Archived (${count})</span>
+  `;
+  li.addEventListener('click', () => {
+    archivedExpanded = !archivedExpanded;
+    renderList(false);
+  });
+  return li;
+}
+
+// Build a row inside the archived section — restore + delete only, no drag/checkbox
+function buildArchivedItem(task) {
+  const li = document.createElement('li');
+  li.className = 'gt-archived-item' + (task.completed ? ' gt-done' : '');
+  li.dataset.id = task.id;
+
+  li.innerHTML = `
+    <span class="gt-text">${escapeHtml(task.text)}</span>
+    <button class="gt-icon-btn gt-unarchive-btn" data-id="${task.id}" title="Restore from archive">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7h18v14H3z"></path>
+        <path d="M12 18v-7"></path>
+        <path d="M9 14l3-3 3 3"></path>
+      </svg>
+    </button>
+    <button class="gt-delete-btn" data-id="${task.id}" title="Delete task">&#x2715;</button>
+  `;
+
+  li.querySelector('.gt-unarchive-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    unarchiveTask(task.id);
+  });
+  li.querySelector('.gt-delete-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteTask(task.id);
+  });
+
+  return li;
+}
+
+// ── Inline edit ───────────────────────────────────────────────────────────────
+
+// Replace the text span with an input; commit on Enter/blur, cancel on Escape.
+// Empty-after-trim values are treated as a cancel so a task is never silently emptied.
+function startEdit(task, textSpan, li) {
+  if (li.querySelector('.gt-edit-input')) return; // already editing
+
+  const input = document.createElement('input');
+  input.type      = 'text';
+  input.className = 'gt-edit-input';
+  input.value     = task.text;
+
+  // Disable drag while editing so a click-drag inside the input doesn't pick the row up
+  li.setAttribute('draggable', 'false');
+  textSpan.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+
+  const commit = () => {
+    if (done) return;
+    done = true;
+    const newText = input.value.trim();
+    if (newText && newText !== task.text) {
+      task.text = newText;
+      debounceSave();
+    }
+    renderList(false);
+  };
+
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    renderList(false);
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')       { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
 }
 
 // ── Add task ──────────────────────────────────────────────────────────────────
@@ -128,6 +255,7 @@ function handleAdd() {
     id:        crypto.randomUUID(),
     text,
     completed: false,
+    archived:  false,
     createdAt: new Date().toISOString()
   };
 
@@ -151,6 +279,24 @@ function toggleComplete(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
   task.completed = !task.completed;
+  renderList(false);
+  debounceSave();
+}
+
+// ── Archive / unarchive ───────────────────────────────────────────────────────
+
+function archiveTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.archived = true;
+  renderList(false);
+  debounceSave();
+}
+
+function unarchiveTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.archived = false;
   renderList(false);
   debounceSave();
 }
@@ -181,7 +327,8 @@ function debounceSave() {
 
 // ── Drag and drop ─────────────────────────────────────────────────────────────
 
-// Wire drag events onto all rendered task items
+// Wire drag events onto active/completed task items only — archived rows and the
+// archive-toggle row must not participate in reordering
 function initDragAndDrop() {
   document.querySelectorAll('.gt-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);

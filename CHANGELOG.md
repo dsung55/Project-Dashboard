@@ -3,6 +3,11 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.13 — Task Editing & Archive
+
+- **Tasks can now be edited inline:** double-click any task name on the Tasks page to rename it. Press Enter to save or Escape to cancel.
+- **Archive completed tasks:** a compact archive icon appears on hover for finished tasks — click it to move the task out of the main list into a collapsible "Archived (n)" section at the bottom. Tasks can be restored or permanently deleted from the archive.
+
 ## v1.6.12 — Custom Font & Timeline Fit
 
 - **New Font setting in Settings → Customizations:** pick from 18 fonts (system, Inter, Helvetica, Georgia, Garamond, SF Pro Rounded, Comic Sans, and more) to apply across the entire app. The choice persists to `config.json` and is restored without flash on every page load.

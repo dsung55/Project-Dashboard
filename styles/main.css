@@ -1466,6 +1466,109 @@ input[type="color"].form-input {
 /* Dark mode checkbox background */
 [data-theme="dark"] .gt-checkbox { background: var(--bg-secondary); }
 
+/* Inline edit input — shown when a task's text is double-clicked */
+.gt-edit-input {
+  flex:          1;
+  font-family:   var(--font);
+  font-size:     15px;
+  font-weight:   500;
+  color:         var(--text-primary);
+  background:    var(--bg-primary);
+  border:        1px solid var(--blue);
+  border-radius: 6px;
+  padding:       6px 10px;
+  outline:       none;
+  box-shadow:    0 0 0 3px rgba(0, 122, 255, 0.12);
+  line-height:   1.4;
+}
+
+[data-theme="dark"] .gt-edit-input { background: var(--bg-secondary); }
+
+/* Shared base for the small icon buttons (archive / unarchive) on a task row */
+.gt-icon-btn {
+  background:     transparent;
+  border:         none;
+  cursor:         pointer;
+  color:          var(--border-color);
+  padding:        2px 4px;
+  border-radius:  4px;
+  flex-shrink:    0;
+  display:        inline-flex;
+  align-items:    center;
+  justify-content: center;
+  transition:     color var(--transition);
+  opacity:        0;
+  pointer-events: none;
+}
+
+.gt-item:hover .gt-icon-btn,
+.gt-archived-item:hover .gt-icon-btn {
+  opacity:        1;
+  pointer-events: auto;
+}
+
+.gt-archive-btn:hover,
+.gt-unarchive-btn:hover { color: var(--blue); }
+
+/* Archived section toggle row */
+.gt-archive-toggle {
+  display:       flex;
+  align-items:   center;
+  gap:           8px;
+  padding:       10px 12px;
+  margin-top:    6px;
+  cursor:        pointer;
+  color:         var(--text-secondary);
+  font-size:     13px;
+  font-weight:   500;
+  border-radius: 8px;
+  user-select:   none;
+  transition:    background var(--transition), color var(--transition);
+}
+
+.gt-archive-toggle:hover {
+  background: var(--bg-secondary);
+  color:      var(--text-primary);
+}
+
+.gt-archive-caret {
+  display:     inline-block;
+  font-size:   10px;
+  line-height: 1;
+  transition:  transform var(--transition);
+}
+
+.gt-archive-toggle.expanded .gt-archive-caret { transform: rotate(90deg); }
+
+/* Single archived task row — muted variant, no drag handle / checkbox */
+.gt-archived-item {
+  display:       flex;
+  align-items:   center;
+  gap:           16px;
+  background:    var(--bg-secondary);
+  border:        1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding:       14px 18px;
+  opacity:       0.85;
+  transition:    box-shadow var(--transition), opacity var(--transition);
+}
+
+.gt-archived-item:hover {
+  opacity:    1;
+  box-shadow: var(--shadow-hover);
+}
+
+.gt-archived-item .gt-text {
+  font-size:   14px;
+  font-weight: 400;
+  color:       var(--text-secondary);
+}
+
+.gt-archived-item.gt-done .gt-text {
+  text-decoration:       line-through;
+  text-decoration-color: var(--border-color);
+}
+
 /* ── Help tooltip (? badge next to page titles) ──────────────────────────────── */
 .help-tooltip {
   display:         inline-flex;
