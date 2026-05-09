@@ -1,11 +1,5 @@
 // project.js — Project detail page: tasks, notes, files, phase, version, color
-
-// ── Preset colors (matches dashboard.js palette) ──────────────────────────────
-const PRESET_COLORS = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE',
-  '#007AFF', '#5856D6', '#BF5AF2', '#FF2D55', '#A2845E',
-  '#8E8E93', '#1D3557', '#2D6A4F', '#E76F51', '#C77DFF'
-];
+// PRESET_COLORS lives in color-picker.js (shared across all pages).
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let projectId     = null;
@@ -290,6 +284,15 @@ function renderTasks() {
 
   list.innerHTML = '';
 
+  // Empty state — shown when the project has no tasks at all
+  if (active.length === 0 && completed.length === 0) {
+    const empty = document.createElement('div');
+    empty.className   = 'task-empty-state';
+    empty.textContent = 'No tasks yet — add your first one above.';
+    list.appendChild(empty);
+    return;
+  }
+
   // Active tasks — first item is the "current task" (bolded); active tasks are draggable
   active.forEach((task, index) => list.appendChild(buildTaskItem(task, index === 0, true)));
 
@@ -356,6 +359,7 @@ function buildTaskItem(task, isCurrent = false, isDraggable = false) {
       <span class="task-text${isCurrent ? ' task-current' : ''}">${escapeHtml(task.text)}</span>
       <button class="btn-task-delete" title="Delete task">&#x2715;</button>
       ${dueBadgeHTML}
+      <span class="task-notes-dot${task.notes?.trim() ? ' active' : ''}" title="Has notes"></span>
       <span class="task-expand-icon">&#9660;</span>
     </div>
     <div class="task-panel">
@@ -411,6 +415,9 @@ function buildTaskItem(task, isCurrent = false, isDraggable = false) {
   const notesInput = item.querySelector('.task-notes-input');
   notesInput.addEventListener('input', () => {
     clearTimeout(taskNotesTimer);
+    // Keep the notes-dot indicator in sync as the user types
+    const dot = item.querySelector('.task-notes-dot');
+    if (dot) dot.classList.toggle('active', notesInput.value.trim().length > 0);
     taskNotesTimer = setTimeout(() => updateTaskNotes(task.id, notesInput.value), 800);
   });
   notesInput.addEventListener('click', e => e.stopPropagation());
@@ -1077,84 +1084,12 @@ function renderFileList() {
 
 // ── Project color picker ──────────────────────────────────────────────────────
 
-// Build the preset swatch grid and wire up the custom color button
-function initProjectColorPicker() {
-  const grid        = document.getElementById('color-picker-grid-project');
-  const hiddenInput = document.getElementById('project-color-value');
-  if (!grid || !hiddenInput) return;
-
-  PRESET_COLORS.forEach((color, index) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'color-swatch' + (index === 0 ? ' selected' : '');
-    btn.style.background = color;
-    btn.dataset.color = color;
-    btn.title = color;
-    btn.addEventListener('click', () => selectProjectSwatch(btn, color));
-    grid.appendChild(btn);
-  });
-
-  // Open the floating custom color picker to the right of the modal
-  document.getElementById('btn-custom-color-project')?.addEventListener('click', () => {
-    const modal = document.querySelector('#modal-color .modal');
-    createFloatingColorPicker(modal, hiddenInput.value || '#4A90D9', (hex) => {
-      hiddenInput.value = hex;
-      grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-      let customSwatch = grid.querySelector('.color-swatch-custom');
-      if (!customSwatch) {
-        customSwatch = document.createElement('button');
-        customSwatch.type = 'button';
-        customSwatch.className = 'color-swatch color-swatch-custom selected';
-        customSwatch.title = 'Custom';
-        customSwatch.addEventListener('click', () => selectProjectSwatch(customSwatch, customSwatch.dataset.color));
-        grid.appendChild(customSwatch);
-      }
-      customSwatch.style.background = hex;
-      customSwatch.dataset.color = hex;
-      customSwatch.classList.add('selected');
-    });
-  });
-}
-
-// Select a swatch in the project color picker
-function selectProjectSwatch(swatchEl, color) {
-  const grid = document.getElementById('color-picker-grid-project');
-  grid?.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-  swatchEl.classList.add('selected');
-  const hiddenInput = document.getElementById('project-color-value');
-  if (hiddenInput) hiddenInput.value = color;
-}
-
-// Sync swatch selection to the current project color when opening the modal
-function syncColorPickerSelection(color) {
-  const grid = document.getElementById('color-picker-grid-project');
-  if (!grid) return;
-  grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-  let matched = false;
-  grid.querySelectorAll('.color-swatch:not(.color-swatch-custom)').forEach(s => {
-    if (s.dataset.color === color) { s.classList.add('selected'); matched = true; }
-  });
-  if (!matched) {
-    let customSwatch = grid.querySelector('.color-swatch-custom');
-    if (!customSwatch) {
-      customSwatch = document.createElement('button');
-      customSwatch.type = 'button';
-      customSwatch.className = 'color-swatch color-swatch-custom selected';
-      customSwatch.title = 'Custom';
-      customSwatch.addEventListener('click', () => selectProjectSwatch(customSwatch, customSwatch.dataset.color));
-      grid.appendChild(customSwatch);
-    }
-    customSwatch.style.background = color;
-    customSwatch.dataset.color = color;
-    customSwatch.classList.add('selected');
-  }
-}
+// Handle for the swatch picker built via the shared factory in DOMContentLoaded
+let projectPicker = null;
 
 // Open the color modal and pre-select the current project color
 function openColorModal() {
-  const hiddenInput = document.getElementById('project-color-value');
-  if (hiddenInput) hiddenInput.value = projectData.color || '#4A90D9';
-  syncColorPickerSelection(projectData.color || '#4A90D9');
+  projectPicker?.sync(projectData.color || '#4A90D9');
   document.getElementById('modal-color').classList.add('open');
 }
 
@@ -1288,17 +1223,6 @@ function openTimeline() {
 function closeTimeline() {
   const overlay = document.getElementById('modal-timeline');
   if (overlay) overlay.style.display = 'none';
-}
-
-// Build cumulative animation delays for `count` timeline items in a single O(n) pass
-function buildTlDelays(count) {
-  const delays = new Array(count);
-  let total = 0;
-  for (let i = 0; i < count; i++) {
-    delays[i] = total;
-    total += Math.max(10, Math.round(120 * Math.pow(0.82, i)));
-  }
-  return delays;
 }
 
 // Assign a { side, level } to each item using a greedy collision-avoidance algorithm.
@@ -1598,7 +1522,7 @@ function renderTimeline() {
   // ── Staggered fade-in left → right ───────────────────────────────────────────
 
   allAnimPins.sort((a, b) => a.pct - b.pct);
-  const tlDelays = buildTlDelays(allAnimPins.length);
+  const tlDelays = buildCumulativeDelays(allAnimPins.length);
   allAnimPins.forEach(({ el }, i) => {
     const isFaded = el.classList.contains('tl-completed');
     el.style.animationName  = isFaded ? 'tl-pin-in-faded' : 'tl-pin-in';
@@ -2166,7 +2090,12 @@ function initTaskCalendar() {
 // ── Task add form ─────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  initProjectColorPicker();
+  projectPicker = createSwatchPicker({
+    gridId:        'color-picker-grid-project',
+    hiddenInputId: 'project-color-value',
+    customBtnId:   'btn-custom-color-project',
+    modalSelector: '#modal-color .modal'
+  });
 
   document.getElementById('btn-cancel-color')
     ?.addEventListener('click', closeColorModal);

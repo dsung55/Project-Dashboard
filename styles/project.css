@@ -286,6 +286,30 @@
   transform: rotate(180deg);
 }
 
+/* Small dot that appears when a task has notes — visible before expanding */
+.task-notes-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--blue);
+  flex-shrink:   0;
+  opacity:       0;
+  transition:    opacity var(--transition);
+  margin-left:   2px;
+}
+
+.task-notes-dot.active { opacity: 1; }
+
+/* Empty state shown in the task list when a project has no tasks */
+.task-empty-state {
+  text-align:  center;
+  color:       var(--text-secondary);
+  font-size:   14px;
+  padding:     36px 16px;
+  border:      1px dashed var(--border-color);
+  border-radius: 10px;
+}
+
 .btn-task-delete {
   background:    transparent;
   border:        none;

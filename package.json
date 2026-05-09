@@ -1,6 +1,6 @@
 {
   "name": "project-dashboard",
-  "version": "1.6.13",
+  "version": "1.6.14",
   "description": "Local project management dashboard",
   "main": "electron.js",
   "scripts": {

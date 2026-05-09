@@ -30,6 +30,20 @@ function escapeHtml(str) {
 // Make window.escapeHtml available globally
 window.escapeHtml = escapeHtml;
 
+// Build cumulative animation delays for `count` items in a single O(n) pass.
+// Returns delays[i] = ms before item i should appear; used by tasks list and timeline
+// staggered intro animations. Avoids the O(n²) cost of per-item loops.
+function buildCumulativeDelays(count) {
+  const delays = new Array(count);
+  let total = 0;
+  for (let i = 0; i < count; i++) {
+    delays[i] = total;
+    total += Math.max(10, Math.round(120 * Math.pow(0.82, i)));
+  }
+  return delays;
+}
+window.buildCumulativeDelays = buildCumulativeDelays;
+
 // ── API methods ───────────────────────────────────────────────────────────────
 
 // Return all projects from the index

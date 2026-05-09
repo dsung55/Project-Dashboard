@@ -91,18 +91,6 @@ function renderList(animate) {
   initDragAndDrop();
 }
 
-// Build an array of cumulative animation delays for `count` items in a single O(n) pass
-// Returns delays[i] = ms before item i should appear; avoids the O(n²) cost of per-item loops
-function buildCumulativeDelays(count) {
-  const delays = new Array(count);
-  let total = 0;
-  for (let i = 0; i < count; i++) {
-    delays[i] = total;
-    total += Math.max(10, Math.round(120 * Math.pow(0.82, i)));
-  }
-  return delays;
-}
-
 // Build and return a single task <li> element
 function buildItem(task) {
   const li = document.createElement('li');
@@ -381,6 +369,12 @@ function handleDrop(e) {
 
   if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
 
+  // Snapshot positions BEFORE the DOM changes so we can FLIP-animate them
+  const list       = document.getElementById('tasks-list');
+  const allEls     = [...list.querySelectorAll('.gt-item')];
+  const beforeRects = new Map(allEls.map(el => [el.dataset.id, el.getBoundingClientRect()]));
+  const movedId    = draggedId;
+
   // Splice the dragged task out and re-insert at the target position
   const [moved] = tasks.splice(fromIdx, 1);
   const newToIdx = tasks.findIndex(t => t.id === targetId);
@@ -388,6 +382,34 @@ function handleDrop(e) {
 
   clearDragStyles();
   renderList(false);
+
+  // FLIP: animate each row from its old position to its new position
+  const newEls = [...list.querySelectorAll('.gt-item')];
+  newEls.forEach(el => {
+    const before = beforeRects.get(el.dataset.id);
+    if (!before) return;
+    const after = el.getBoundingClientRect();
+    const dy    = before.top - after.top;
+
+    if (el.dataset.id === movedId) {
+      // Dropped item: bubble-in spring
+      el.style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = 'card-bubble 300ms cubic-bezier(0.34, 1.4, 0.64, 1) both';
+    } else if (Math.abs(dy) >= 0.5) {
+      // Neighboring items that shifted: slide to their new spot
+      el.style.transition = 'none';
+      el.style.transform  = `translateY(${dy}px)`;
+      void el.offsetWidth;
+      el.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
+      el.style.transform  = '';
+      el.addEventListener('transitionend', () => {
+        el.style.transition = '';
+        el.style.transform  = '';
+      }, { once: true });
+    }
+  });
+
   debounceSave();
 }
 

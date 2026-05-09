@@ -3,6 +3,110 @@
 // Renders a draggable HSV picker panel positioned to the right of anchorEl.
 // Only one panel exists at a time; calling again replaces the previous one.
 
+// Shared preset palette used by every swatch grid in the app
+window.PRESET_COLORS = [
+  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE',
+  '#007AFF', '#5856D6', '#BF5AF2', '#FF2D55', '#A2845E',
+  '#8E8E93', '#1D3557', '#2D6A4F', '#E76F51', '#C77DFF'
+];
+
+// Build a preset-swatch grid + Custom-color button into the page and return an API
+// for syncing/resetting/destroying it. Centralizes the previously-triplicated logic
+// from dashboard.js (create + change-color modals) and project.js (project modal).
+//
+// opts: {
+//   gridId:        id of the swatch grid container,
+//   hiddenInputId: id of the hidden <input> that stores the chosen hex color,
+//   customBtnId:   id of the "Custom color…" button,
+//   modalSelector: CSS selector for the parent modal (used to anchor floating picker),
+//   onChange:      optional callback fired whenever the selection changes
+// }
+window.createSwatchPicker = function (opts) {
+  const grid        = document.getElementById(opts.gridId);
+  const hiddenInput = document.getElementById(opts.hiddenInputId);
+  if (!grid || !hiddenInput) return null;
+
+  // Set the hidden input + fire onChange callback
+  function setColor(color) {
+    hiddenInput.value = color;
+    opts.onChange?.(color);
+  }
+
+  // Mark a swatch as the only selected one in the grid
+  function markSelected(swatchEl) {
+    grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    swatchEl.classList.add('selected');
+  }
+
+  // Get-or-create the single "custom color" swatch shown after using the floating picker
+  function ensureCustomSwatch(hex) {
+    let swatch = grid.querySelector('.color-swatch-custom');
+    if (!swatch) {
+      swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'color-swatch color-swatch-custom';
+      swatch.title = 'Custom';
+      swatch.addEventListener('click', () => {
+        markSelected(swatch);
+        setColor(swatch.dataset.color);
+      });
+      grid.appendChild(swatch);
+    }
+    swatch.style.background = hex;
+    swatch.dataset.color    = hex;
+    return swatch;
+  }
+
+  // Build the preset swatches once
+  window.PRESET_COLORS.forEach((color, index) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-swatch' + (index === 0 ? ' selected' : '');
+    btn.style.background = color;
+    btn.dataset.color = color;
+    btn.title = color;
+    btn.addEventListener('click', () => {
+      markSelected(btn);
+      setColor(color);
+    });
+    grid.appendChild(btn);
+  });
+
+  // "Custom color…" button opens the floating HSV picker
+  document.getElementById(opts.customBtnId)?.addEventListener('click', () => {
+    const anchor = document.querySelector(opts.modalSelector);
+    window.createFloatingColorPicker(anchor, hiddenInput.value || '#4A90D9', (hex) => {
+      const swatch = ensureCustomSwatch(hex);
+      markSelected(swatch);
+      setColor(hex);
+    });
+  });
+
+  return {
+    // Preselect a color when opening a modal — matches preset, else creates custom swatch
+    sync(color) {
+      grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      const presetMatch = [...grid.querySelectorAll('.color-swatch:not(.color-swatch-custom)')]
+        .find(s => s.dataset.color === color);
+      if (presetMatch) {
+        presetMatch.classList.add('selected');
+      } else {
+        const swatch = ensureCustomSwatch(color);
+        swatch.classList.add('selected');
+      }
+      hiddenInput.value = color;
+    },
+    // Reset to the first preset and remove any custom swatch (used after closing create modal)
+    reset() {
+      document.getElementById('ccp-panel')?.remove();
+      grid.querySelector('.color-swatch-custom')?.remove();
+      const swatches = grid.querySelectorAll('.color-swatch');
+      swatches.forEach((s, i) => s.classList.toggle('selected', i === 0));
+      hiddenInput.value = window.PRESET_COLORS[0];
+    }
+  };
+};
+
 (function () {
 
   // Convert a hex color string to {h, s, v} (h in 0-360, s/v in 0-1)

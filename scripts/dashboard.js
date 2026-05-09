@@ -1,12 +1,5 @@
 // dashboard.js — Home page: renders project cards grouped by phase, handles create/delete
 
-// ── Preset colors for the color picker (visually distinct palette) ─────────────
-const PRESET_COLORS = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE',
-  '#007AFF', '#5856D6', '#BF5AF2', '#FF2D55', '#A2845E',
-  '#8E8E93', '#1D3557', '#2D6A4F', '#E76F51', '#C77DFF'
-];
-
 // ── State ─────────────────────────────────────────────────────────────────────
 let allProjects          = [];
 let allPhases            = [];
@@ -20,6 +13,10 @@ let dropTargetCard       = null;   // card element currently showing a same-phas
 let dropInsertBefore     = true;   // true = insert before dropTargetCard, false = after
 let crossPhaseDropTarget = null;   // card in a different-phase section showing insertion indicator
 let crossPhaseInsertBefore = true; // direction for the cross-phase insertion indicator
+
+// Swatch picker handles — initialized in DOMContentLoaded
+let createPicker = null;
+let changePicker = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -476,7 +473,7 @@ function openCreateModal() {
 function closeCreateModal() {
   document.getElementById('modal-create').classList.remove('open');
   document.getElementById('form-create').reset();
-  resetColorPicker();
+  createPicker?.reset();
 }
 
 // Handle create form submission — inserts the card directly with FLIP animation
@@ -603,8 +600,7 @@ async function handleDeleteConfirm() {
 // ── Event wiring ──────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  initColorPicker();
-  initChangeColorPicker();
+  initSwatchPickers();
 
   document.getElementById('btn-cancel-change-color')
     ?.addEventListener('click', closeChangeColorModal);
@@ -639,9 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Open the change-color modal for an existing project card
 function openChangeColorModal(projectId, currentColor) {
   pendingColorChangeId = projectId;
-  const hiddenInput = document.getElementById('change-project-color');
-  if (hiddenInput) hiddenInput.value = currentColor;
-  syncChangeColorPickerSelection(currentColor);
+  changePicker?.sync(currentColor);
   document.getElementById('modal-change-color').classList.add('open');
 }
 
@@ -684,139 +678,20 @@ async function handleChangeColorSave() {
   }
 }
 
-// Build the preset swatch grid for the change-color modal
-function initChangeColorPicker() {
-  const grid        = document.getElementById('color-picker-grid-change');
-  const hiddenInput = document.getElementById('change-project-color');
-  if (!grid || !hiddenInput) return;
-
-  PRESET_COLORS.forEach((color, index) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'color-swatch' + (index === 0 ? ' selected' : '');
-    btn.style.background = color;
-    btn.dataset.color = color;
-    btn.title = color;
-    btn.addEventListener('click', () => selectChangeSwatch(btn, color));
-    grid.appendChild(btn);
+// Build both swatch pickers using the shared factory
+function initSwatchPickers() {
+  createPicker = createSwatchPicker({
+    gridId:        'color-picker-grid',
+    hiddenInputId: 'new-project-color',
+    customBtnId:   'btn-custom-color',
+    modalSelector: '#modal-create .modal'
   });
-
-  // Open the floating custom color picker to the right of the modal
-  document.getElementById('btn-custom-color-change')?.addEventListener('click', () => {
-    const modal = document.querySelector('#modal-change-color .modal');
-    createFloatingColorPicker(modal, hiddenInput.value || '#4A90D9', (hex) => {
-      hiddenInput.value = hex;
-      grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-      let customSwatch = grid.querySelector('.color-swatch-custom');
-      if (!customSwatch) {
-        customSwatch = document.createElement('button');
-        customSwatch.type = 'button';
-        customSwatch.className = 'color-swatch color-swatch-custom selected';
-        customSwatch.title = 'Custom';
-        customSwatch.addEventListener('click', () => selectChangeSwatch(customSwatch, customSwatch.dataset.color));
-        grid.appendChild(customSwatch);
-      }
-      customSwatch.style.background = hex;
-      customSwatch.dataset.color = hex;
-      customSwatch.classList.add('selected');
-    });
+  changePicker = createSwatchPicker({
+    gridId:        'color-picker-grid-change',
+    hiddenInputId: 'change-project-color',
+    customBtnId:   'btn-custom-color-change',
+    modalSelector: '#modal-change-color .modal'
   });
-}
-
-// Select a swatch in the change-color picker
-function selectChangeSwatch(swatchEl, color) {
-  const grid = document.getElementById('color-picker-grid-change');
-  grid?.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-  swatchEl.classList.add('selected');
-  const hiddenInput = document.getElementById('change-project-color');
-  if (hiddenInput) hiddenInput.value = color;
-}
-
-// Pre-select the swatch matching the project's current color when opening the modal
-function syncChangeColorPickerSelection(color) {
-  const grid = document.getElementById('color-picker-grid-change');
-  if (!grid) return;
-  grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-  let matched = false;
-  grid.querySelectorAll('.color-swatch:not(.color-swatch-custom)').forEach(s => {
-    if (s.dataset.color === color) { s.classList.add('selected'); matched = true; }
-  });
-  if (!matched) {
-    let customSwatch = grid.querySelector('.color-swatch-custom');
-    if (!customSwatch) {
-      customSwatch = document.createElement('button');
-      customSwatch.type = 'button';
-      customSwatch.className = 'color-swatch color-swatch-custom selected';
-      customSwatch.title = 'Custom';
-      customSwatch.addEventListener('click', () => selectChangeSwatch(customSwatch, customSwatch.dataset.color));
-      grid.appendChild(customSwatch);
-    }
-    customSwatch.style.background = color;
-    customSwatch.dataset.color = color;
-    customSwatch.classList.add('selected');
-  }
-}
-
-// ── Color picker ──────────────────────────────────────────────────────────────
-
-// Build the preset swatch grid and wire up the custom color button
-function initColorPicker() {
-  const grid        = document.getElementById('color-picker-grid');
-  const hiddenInput = document.getElementById('new-project-color');
-  if (!grid || !hiddenInput) return;
-
-  PRESET_COLORS.forEach((color, index) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'color-swatch' + (index === 0 ? ' selected' : '');
-    btn.style.background = color;
-    btn.dataset.color = color;
-    btn.title = color;
-    btn.addEventListener('click', () => selectSwatch(btn, color));
-    grid.appendChild(btn);
-  });
-
-  // Open the floating custom color picker to the right of the modal
-  document.getElementById('btn-custom-color')?.addEventListener('click', () => {
-    const modal = document.querySelector('#modal-create .modal');
-    createFloatingColorPicker(modal, hiddenInput.value || '#4A90D9', (hex) => {
-      hiddenInput.value = hex;
-      grid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-      let customSwatch = grid.querySelector('.color-swatch-custom');
-      if (!customSwatch) {
-        customSwatch = document.createElement('button');
-        customSwatch.type = 'button';
-        customSwatch.className = 'color-swatch color-swatch-custom selected';
-        customSwatch.title = 'Custom';
-        customSwatch.addEventListener('click', () => selectSwatch(customSwatch, customSwatch.dataset.color));
-        grid.appendChild(customSwatch);
-      }
-      customSwatch.style.background = hex;
-      customSwatch.dataset.color = hex;
-      customSwatch.classList.add('selected');
-    });
-  });
-}
-
-// Select a swatch: mark it selected and update the hidden color input
-function selectSwatch(swatchEl, color) {
-  const grid = document.getElementById('color-picker-grid');
-  grid?.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-  swatchEl.classList.add('selected');
-  const hiddenInput = document.getElementById('new-project-color');
-  if (hiddenInput) hiddenInput.value = color;
-}
-
-// Reset the color picker back to the first preset when the modal is closed
-function resetColorPicker() {
-  const grid        = document.getElementById('color-picker-grid');
-  const hiddenInput = document.getElementById('new-project-color');
-  if (!grid) return;
-  document.getElementById('ccp-panel')?.remove();
-  grid.querySelector('.color-swatch-custom')?.remove();
-  const swatches = grid.querySelectorAll('.color-swatch');
-  swatches.forEach((s, i) => s.classList.toggle('selected', i === 0));
-  if (hiddenInput) hiddenInput.value = PRESET_COLORS[0];
 }
 
 // ── Search / filter ───────────────────────────────────────────────────────────

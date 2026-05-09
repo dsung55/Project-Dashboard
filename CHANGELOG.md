@@ -3,6 +3,12 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.6.14 — Code Optimization
+
+- **Eliminated color picker duplication:** the swatch grid + custom color logic was implemented three separate times. It now lives in a single shared factory used by all three modals.
+- **Deduplicated shared utilities:** `PRESET_COLORS` and the staggered animation delay helper (`buildCumulativeDelays`) were defined multiple times across files — each now has one authoritative definition.
+- No user-visible feature changes; all behavior is identical.
+
 ## v1.6.13 — Task Editing & Archive
 
 - **Tasks can now be edited inline:** double-click any task name on the Tasks page to rename it. Press Enter to save or Escape to cancel.
