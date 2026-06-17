@@ -3,6 +3,12 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.7.0 — Task Grouping & Move to Project
+
+- **Move a task into a project:** active tasks on the Tasks page now have a hover icon that opens a project picker — pick a project and the task is added to that project's task list and removed from the global list.
+- **Group tasks:** click "Group tasks" to enter selection mode, pick two or more tasks, name the group, and they're wrapped together in a translucent highlighted box. Use "Ungroup" on the group header to dissolve it.
+- **New tasks now appear at the top** of the list instead of the bottom, so the most recently added task is always in view.
+
 ## v1.6.14 — Code Optimization
 
 - **Eliminated color picker duplication:** the swatch grid + custom color logic was implemented three separate times. It now lives in a single shared factory used by all three modals.

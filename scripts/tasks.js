@@ -1,9 +1,9 @@
 // tasks.js — Global (miscellaneous) tasks page logic
 // Handles: add, edit (dbl-click), delete, complete/uncomplete, archive/unarchive,
-//          drag-to-reorder, pop-in animation
+//          move-to-project, grouping, drag-to-reorder, pop-in animation
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let tasks = [];                 // full array of task objects { id, text, completed, archived, createdAt }
+let tasks = [];                 // full array of task objects { id, text, completed, archived, createdAt, groupId, groupName }
 let savePending      = false;   // debounce guard for save calls
 let archivedExpanded = false;   // whether the "Archived (n)" section is open
 
@@ -11,6 +11,13 @@ let archivedExpanded = false;   // whether the "Archived (n)" section is open
 let draggedId      = null;  // id of the task being dragged
 let dropTargetEl   = null;  // <li> element being hovered
 let dropInsertAbove = true; // true = insert above target, false = below
+
+// Selection / grouping state
+let selectionMode = false;            // whether the user is picking tasks to group
+let selectedIds   = new Set();        // ids of tasks currently selected for grouping
+
+// Move-to-project state
+let pendingMoveId = null;             // id of the task awaiting a destination project
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -31,6 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
     .addEventListener('click', handleAdd);
   document.getElementById('tasks-add-input')
     .addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAdd(); });
+
+  // Grouping: enter selection mode, then create or cancel
+  document.getElementById('tasks-group-btn')
+    .addEventListener('click', enterSelectionMode);
+  document.getElementById('tasks-selection-cancel')
+    .addEventListener('click', exitSelectionMode);
+  document.getElementById('tasks-selection-create')
+    .addEventListener('click', openGroupModal);
+
+  // Group-name modal
+  document.getElementById('btn-cancel-group')
+    .addEventListener('click', closeGroupModal);
+  document.getElementById('btn-confirm-group')
+    .addEventListener('click', confirmCreateGroup);
+  document.getElementById('group-name-input')
+    .addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmCreateGroup(); });
+
+  // Move-to-project modal
+  document.getElementById('btn-cancel-move')
+    .addEventListener('click', closeMoveModal);
+  document.getElementById('btn-confirm-move')
+    .addEventListener('click', confirmMove);
 });
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -52,16 +81,25 @@ function renderList(animate) {
   const active    = visible.filter(t => !t.completed);
   const completed = visible.filter(t =>  t.completed);
 
-  // Precompute all delays in one O(n) pass instead of O(n²) per-item calls
+  // Precompute all delays in one O(n) pass instead of O(n²) per-item calls.
+  // A single running index is incremented as each row is built so that grouped
+  // rows (which render inside a wrapper) still stagger in document order.
   const delays = animate ? buildCumulativeDelays(active.length + completed.length) : null;
+  const anim   = { delays, index: 0 };
 
-  active.forEach((task, index) => {
-    const item = buildItem(task);
-    if (animate) {
-      item.style.animationName  = 'task-pop-in';
-      item.style.animationDelay = delays[index] + 'ms';
+  // Active tasks — cluster grouped tasks into a translucent box at the position
+  // of the group's first member; ungrouped tasks render inline.
+  const placed = new Set();
+  active.forEach(task => {
+    if (placed.has(task.id)) return;
+    if (task.groupId) {
+      const members = active.filter(t => t.groupId === task.groupId);
+      members.forEach(m => placed.add(m.id));
+      list.appendChild(buildGroup(task.groupId, task.groupName, members, animate, anim));
+    } else {
+      placed.add(task.id);
+      list.appendChild(buildItem(task, animate, anim));
     }
-    list.appendChild(item);
   });
 
   // Separator between active and completed
@@ -71,13 +109,9 @@ function renderList(animate) {
     list.appendChild(hr);
   }
 
-  completed.forEach((task, index) => {
-    const item = buildItem(task);
-    if (animate) {
-      item.style.animationName  = 'task-pop-in';
-      item.style.animationDelay = delays[active.length + index] + 'ms';
-    }
-    list.appendChild(item);
+  // Completed tasks render flat (grouping is only an active-task affordance)
+  completed.forEach(task => {
+    list.appendChild(buildItem(task, animate, anim));
   });
 
   // Archived section — only present when at least one task is archived
@@ -91,11 +125,28 @@ function renderList(animate) {
   initDragAndDrop();
 }
 
-// Build and return a single task <li> element
-function buildItem(task) {
+// Build and return a single task <li> element.
+// animate + anim (a { delays, index } counter) drive the staggered pop-in.
+function buildItem(task, animate, anim) {
   const li = document.createElement('li');
   li.className  = 'gt-item' + (task.completed ? ' gt-done' : '');
   li.dataset.id = task.id;
+
+  // In selection mode, active tasks become pickable rows — no drag, no inline
+  // controls; clicking anywhere on the row toggles its selection.
+  const selectable = selectionMode && !task.completed;
+  if (selectable) {
+    if (selectedIds.has(task.id)) li.classList.add('gt-selected');
+    li.setAttribute('draggable', 'false');
+    li.innerHTML = `
+      <div class="gt-select-box${selectedIds.has(task.id) ? ' checked' : ''}"></div>
+      <span class="gt-text">${escapeHtml(task.text)}</span>
+    `;
+    li.addEventListener('click', () => toggleSelect(task.id));
+    applyPopIn(li, animate, anim);
+    return li;
+  }
+
   li.setAttribute('draggable', 'true');
 
   // Archive button is only offered for completed tasks — its purpose is to tuck
@@ -110,16 +161,38 @@ function buildItem(task) {
        </button>`
     : '';
 
+  // Move button is only offered for active tasks — it relocates the task into a
+  // chosen project's task list
+  const moveBtnHtml = !task.completed
+    ? `<button class="gt-icon-btn gt-move-btn" data-id="${task.id}" title="Move to a project">
+         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H3z"></path>
+           <path d="M13 13h5"></path>
+           <path d="M16 11l2 2-2 2"></path>
+         </svg>
+       </button>`
+    : '';
+
   li.innerHTML = `
     <span class="gt-drag-handle" title="Drag to reorder">⠿</span>
     <div class="gt-checkbox${task.completed ? ' checked' : ''}" data-id="${task.id}" title="${task.completed ? 'Mark incomplete' : 'Mark complete'}"></div>
     <span class="gt-text" title="Double-click to edit">${escapeHtml(task.text)}</span>
+    ${moveBtnHtml}
     ${archiveBtnHtml}
     <button class="gt-delete-btn" data-id="${task.id}" title="Delete task">&#x2715;</button>
   `;
 
   // Checkbox toggles completion
   li.querySelector('.gt-checkbox').addEventListener('click', () => toggleComplete(task.id));
+
+  // Move button (only present for active tasks) opens the project picker
+  const moveBtn = li.querySelector('.gt-move-btn');
+  if (moveBtn) {
+    moveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMoveModal(task.id);
+    });
+  }
 
   // Archive button (only present for completed tasks)
   const archiveBtn = li.querySelector('.gt-archive-btn');
@@ -140,7 +213,39 @@ function buildItem(task) {
   const textSpan = li.querySelector('.gt-text');
   textSpan.addEventListener('dblclick', () => startEdit(task, textSpan, li));
 
+  applyPopIn(li, animate, anim);
   return li;
+}
+
+// Apply the staggered pop-in animation to a row and advance the shared counter
+function applyPopIn(el, animate, anim) {
+  if (!animate || !anim) return;
+  el.style.animationName  = 'task-pop-in';
+  el.style.animationDelay = anim.delays[anim.index] + 'ms';
+  anim.index++;
+}
+
+// Build a translucent group box wrapping all active tasks that share a groupId
+function buildGroup(groupId, groupName, members, animate, anim) {
+  const wrap = document.createElement('li');
+  wrap.className = 'gt-group';
+  wrap.dataset.groupId = groupId;
+
+  const header = document.createElement('div');
+  header.className = 'gt-group-header';
+  header.innerHTML = `
+    <span class="gt-group-name">${escapeHtml(groupName || 'Group')}</span>
+    <button class="gt-ungroup-btn" title="Ungroup">Ungroup</button>
+  `;
+  header.querySelector('.gt-ungroup-btn').addEventListener('click', () => ungroup(groupId));
+  wrap.appendChild(header);
+
+  const ul = document.createElement('ul');
+  ul.className = 'gt-group-items';
+  members.forEach(m => ul.appendChild(buildItem(m, animate, anim)));
+  wrap.appendChild(ul);
+
+  return wrap;
 }
 
 // Build the "Archived (n)" toggle row that opens/closes the archived section
@@ -247,7 +352,8 @@ function handleAdd() {
     createdAt: new Date().toISOString()
   };
 
-  tasks.push(task);
+  // New tasks land at the top of the list so the most recent is seen first
+  tasks.unshift(task);
   input.value = '';
 
   // Re-render without stagger animation, then animate just the new item
@@ -295,6 +401,153 @@ function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
   renderList(false);
   debounceSave();
+}
+
+// ── Grouping ──────────────────────────────────────────────────────────────────
+
+// Enter selection mode: active tasks become pickable so the user can group them
+function enterSelectionMode() {
+  selectionMode = true;
+  selectedIds.clear();
+  document.getElementById('tasks-toolbar').setAttribute('hidden', '');
+  document.getElementById('tasks-selection-bar').removeAttribute('hidden');
+  updateSelectionBar();
+  renderList(false);
+}
+
+// Leave selection mode without creating a group
+function exitSelectionMode() {
+  selectionMode = false;
+  selectedIds.clear();
+  document.getElementById('tasks-selection-bar').setAttribute('hidden', '');
+  document.getElementById('tasks-toolbar').removeAttribute('hidden');
+  renderList(false);
+}
+
+// Toggle whether a task is part of the pending selection
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else                     selectedIds.add(id);
+  updateSelectionBar();
+  renderList(false);
+}
+
+// Reflect the current selection count; the create button needs at least 2 tasks
+function updateSelectionBar() {
+  const count = selectedIds.size;
+  document.getElementById('tasks-selection-count').textContent =
+    count === 1 ? '1 selected' : `${count} selected`;
+  document.getElementById('tasks-selection-create').disabled = count < 2;
+}
+
+// Open the modal that asks for the new group's name
+function openGroupModal() {
+  if (selectedIds.size < 2) return;
+  const input = document.getElementById('group-name-input');
+  input.value = '';
+  document.getElementById('modal-group').classList.add('open');
+  input.focus();
+}
+
+// Close the group-name modal without creating a group
+function closeGroupModal() {
+  document.getElementById('modal-group').classList.remove('open');
+}
+
+// Assign a shared groupId + name to every selected task, then exit selection mode
+function confirmCreateGroup() {
+  const name = document.getElementById('group-name-input').value.trim();
+  if (!name) { showToast('Please enter a group name', true); return; }
+  if (selectedIds.size < 2) return;
+
+  const groupId = crypto.randomUUID();
+  const count   = selectedIds.size;
+  tasks.forEach(t => {
+    if (selectedIds.has(t.id)) {
+      t.groupId   = groupId;
+      t.groupName = name;
+    }
+  });
+
+  closeGroupModal();
+  exitSelectionMode();      // also re-renders (clears selectedIds)
+  debounceSave();
+  showToast(`Grouped ${count} tasks into "${name}"`);
+}
+
+// Remove the group assignment from every task in the given group
+function ungroup(groupId) {
+  tasks.forEach(t => {
+    if (t.groupId === groupId) {
+      t.groupId   = null;
+      t.groupName = null;
+    }
+  });
+  renderList(false);
+  debounceSave();
+}
+
+// ── Move to project ───────────────────────────────────────────────────────────
+
+// Open the project picker for a given task; bail with a toast if no projects exist
+async function openMoveModal(id) {
+  let projects = [];
+  try {
+    projects = await api.getProjects();
+  } catch (err) {
+    showToast('Could not load projects: ' + err.message, true);
+    return;
+  }
+  if (!projects.length) {
+    showToast('No projects yet — create one first', true);
+    return;
+  }
+
+  pendingMoveId = id;
+  const select = document.getElementById('move-project-select');
+  select.innerHTML = projects
+    .map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+    .join('');
+  document.getElementById('modal-move').classList.add('open');
+}
+
+// Close the move modal and clear the pending task
+function closeMoveModal() {
+  document.getElementById('modal-move').classList.remove('open');
+  pendingMoveId = null;
+}
+
+// Move the pending task into the chosen project as a new project task, then
+// remove it from the global list
+async function confirmMove() {
+  const select    = document.getElementById('move-project-select');
+  const projectId = select.value;
+  const task      = tasks.find(t => t.id === pendingMoveId);
+  if (!task || !projectId) { closeMoveModal(); return; }
+
+  try {
+    const project = await api.getProject(projectId);
+    project.tasks = project.tasks || [];
+    // Match the project-task shape used by project.js addTask
+    project.tasks.push({
+      id:          crypto.randomUUID(),
+      text:        task.text,
+      completed:   false,
+      completedAt: null,
+      notes:       '',
+      subItems:    [],
+      dueDate:     null
+    });
+    await api.saveProject(projectId, project);
+
+    tasks = tasks.filter(t => t.id !== pendingMoveId);
+    closeMoveModal();
+    renderList(false);
+    debounceSave();
+    showToast(`Moved to "${project.name}"`);
+  } catch (err) {
+    showToast('Could not move task: ' + err.message, true);
+  }
 }
 
 // ── Save ──────────────────────────────────────────────────────────────────────

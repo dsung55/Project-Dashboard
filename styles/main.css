@@ -1569,6 +1569,125 @@ input[type="color"].form-input {
   text-decoration-color: var(--border-color);
 }
 
+/* ── Move-to-project button on a task row ─────────────────────────────────────── */
+.gt-move-btn:hover { color: var(--blue); }
+
+/* ── Grouping: toolbar + selection bar ───────────────────────────────────────── */
+.tasks-toolbar {
+  display:         flex;
+  justify-content: flex-end;
+  margin-bottom:   20px;
+}
+
+/* Selection bar replaces the toolbar while picking tasks to group */
+.tasks-selection-bar {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             16px;
+  padding:         12px 16px;
+  margin-bottom:   20px;
+  background:      var(--bg-secondary);
+  border:         1px solid var(--border-color);
+  border-radius:   10px;
+}
+
+.tasks-selection-count {
+  font-size:   14px;
+  font-weight: 600;
+  color:       var(--text-primary);
+}
+
+.tasks-selection-actions {
+  display: flex;
+  gap:     10px;
+}
+
+/* Selection checkbox shown on each active row while in selection mode */
+.gt-select-box {
+  width:           22px;
+  height:          22px;
+  border:          2px solid var(--border-color);
+  border-radius:   6px;
+  flex-shrink:     0;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  background:      var(--bg-primary);
+  transition:      background var(--transition), border-color var(--transition);
+}
+
+.gt-select-box.checked {
+  background:   var(--blue);
+  border-color: var(--blue);
+}
+
+.gt-select-box.checked::after {
+  content:     '';
+  display:     block;
+  width:       5px;
+  height:      9px;
+  border:      2px solid #fff;
+  border-top:  none;
+  border-left: none;
+  transform:   rotate(45deg) translateY(-1px);
+}
+
+[data-theme="dark"] .gt-select-box { background: var(--bg-secondary); }
+
+/* A selectable row invites a click and highlights when chosen */
+.gt-item.gt-selected { box-shadow: 0 0 0 2px var(--blue); }
+
+/* ── Grouping: the translucent box wrapping a group's tasks ───────────────────── */
+.gt-group {
+  display:        flex;
+  flex-direction: column;
+  gap:            10px;
+  padding:        12px;
+  background:     rgba(0, 122, 255, 0.06);
+  border:        1px solid rgba(0, 122, 255, 0.18);
+  border-radius:  calc(var(--radius) + 4px);
+}
+
+.gt-group-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         2px 6px 0;
+}
+
+.gt-group-name {
+  font-size:      13px;
+  font-weight:    600;
+  color:          var(--blue);
+  letter-spacing: 0.02em;
+}
+
+.gt-ungroup-btn {
+  background:    transparent;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--text-secondary);
+  font-size:     12px;
+  font-weight:   500;
+  padding:       2px 6px;
+  border-radius: 5px;
+  transition:    color var(--transition), background var(--transition);
+}
+
+.gt-ungroup-btn:hover {
+  color:      var(--blue);
+  background: rgba(0, 122, 255, 0.1);
+}
+
+/* The member list inside a group reuses the same column layout as the main list */
+.gt-group-items {
+  list-style:     none;
+  display:        flex;
+  flex-direction: column;
+  gap:            10px;
+}
+
 /* ── Help tooltip (? badge next to page titles) ──────────────────────────────── */
 .help-tooltip {
   display:         inline-flex;

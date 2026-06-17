@@ -53,10 +53,57 @@
         <button class="btn btn-primary tasks-add-btn" id="tasks-add-btn">Add</button>
       </div>
 
+      <!-- Toolbar: enter grouping (selection) mode -->
+      <div class="tasks-toolbar" id="tasks-toolbar">
+        <button class="btn btn-secondary" id="tasks-group-btn">Group tasks</button>
+      </div>
+
+      <!-- Selection bar: shown while picking tasks to group -->
+      <div class="tasks-selection-bar" id="tasks-selection-bar" hidden>
+        <span class="tasks-selection-count" id="tasks-selection-count">0 selected</span>
+        <div class="tasks-selection-actions">
+          <button class="btn btn-secondary" id="tasks-selection-cancel">Cancel</button>
+          <button class="btn btn-primary" id="tasks-selection-create" disabled>Create group</button>
+        </div>
+      </div>
+
       <!-- Task list — rendered by tasks.js -->
       <ul class="tasks-list" id="tasks-list"></ul>
 
     </main>
+  </div>
+
+  <!-- Move-to-project modal -->
+  <div class="modal-overlay" id="modal-move">
+    <div class="modal">
+      <div class="modal-title">Move to Project</div>
+      <p class="text-secondary modal-body-text">
+        Choose a project to move this task into. It will be added to that project's task list and removed from here.
+      </p>
+      <div class="form-group">
+        <label class="form-label" for="move-project-select">Project</label>
+        <select class="form-select" id="move-project-select"></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-move">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-move">Move</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name-the-group modal -->
+  <div class="modal-overlay" id="modal-group">
+    <div class="modal">
+      <div class="modal-title">Name this group</div>
+      <div class="form-group">
+        <label class="form-label" for="group-name-input">Group name</label>
+        <input class="form-input" type="text" id="group-name-input" placeholder="e.g. Errands" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-group">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-group">Create group</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast container -->
