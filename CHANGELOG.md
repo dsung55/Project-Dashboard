@@ -3,6 +3,12 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.7.2 — Rename Projects & Fuller Cards
+
+- **Rename projects:** click a project's name at the top of its detail page to edit it — Enter or click away to save, Escape to cancel.
+- **Current task wraps on dashboard cards:** long current tasks now wrap across up to five lines instead of being cut off on one line.
+- **Faster dashboard re-renders:** card background images are cached for the session instead of being re-downloaded every time cards are re-arranged.
+
 ## v1.7.1 — Update Relaunch Fix
 
 - **Fixed: app would not reopen after installing an auto-update.** The NSIS installer was relaunching the app before the old process had fully exited, leaving zombie processes that held Electron's single-instance lock — causing every subsequent launch to silently quit. The installer no longer force-relaunches; the app closes cleanly and you reopen it normally from the shortcut.

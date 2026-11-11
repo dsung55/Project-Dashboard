@@ -7,6 +7,11 @@ let pendingDeleteId      = null;   // id of the project the user is about to del
 let pendingColorChangeId = null;   // id of the project whose color is being changed
 let refreshPending       = false;  // prevents concurrent in-flight project fetches
 
+// One cache-busting key per page load. Backgrounds are changed on the Settings page, so a fresh
+// key on each visit picks up new images — but re-renders (drag/drop, refresh) reuse the cached
+// images instead of re-downloading every card background each time.
+const BG_CACHE_KEY = Date.now();
+
 // Drag state
 let draggedProject       = null;   // the full project object being dragged
 let dropTargetCard       = null;   // card element currently showing a same-phase drop indicator
@@ -155,7 +160,7 @@ function buildCard(project) {
   // Apply per-project background image if one has been set in settings
   if (project.bgApplied) {
     card.classList.add('has-card-bg');
-    card.style.setProperty('--card-bg-image', `url('/api/projects/${project.id}/background?t=${Date.now()}')`);
+    card.style.setProperty('--card-bg-image', `url('/api/projects/${project.id}/background?t=${BG_CACHE_KEY}')`);
   }
 
   // Navigate to project detail on card click (but not on interactive elements)

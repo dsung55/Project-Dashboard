@@ -243,7 +243,11 @@ function renderHeader() {
   if (swatch) swatch.style.background = p.color || '#4A90D9';
 
   const nameEl = document.getElementById('project-name');
-  if (nameEl) nameEl.textContent = p.name;
+  if (nameEl) {
+    nameEl.textContent = p.name;
+    nameEl.title = 'Click to rename';
+    nameEl.addEventListener('click', startProjectRename);
+  }
 
   // Phase selector
   const phaseEl = document.getElementById('project-phase');
@@ -260,6 +264,58 @@ function renderHeader() {
     colorBtn.style.background = p.color || '#4A90D9';
     colorBtn.addEventListener('click', openColorModal);
   }
+}
+
+// Swap the project name heading for a text input; Enter/blur saves, Escape cancels
+function startProjectRename() {
+  const nameEl = document.getElementById('project-name');
+  if (!nameEl || nameEl.querySelector('input')) return;
+
+  const input = document.createElement('input');
+  input.type      = 'text';
+  input.className = 'project-name-input';
+  input.value     = projectData.name || '';
+  input.maxLength = 120;
+
+  nameEl.textContent = '';
+  nameEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  let finished = false;
+
+  // Close the editor and either save the new name or restore the old one
+  const finish = async (save) => {
+    if (finished) return;
+    finished = true;
+    const newName = input.value.trim();
+    const oldName = projectData.name;
+    nameEl.textContent = oldName;
+
+    if (!save || !newName || newName === oldName) {
+      if (save && !newName) showToast('Project name cannot be empty', true);
+      return;
+    }
+
+    projectData.name = newName;
+    nameEl.textContent = newName;
+    document.title = newName + ' — Dashboard';
+    try {
+      projectData = await api.saveProject(projectId, projectData);
+      showToast('Project renamed');
+    } catch (err) {
+      projectData.name = oldName;
+      nameEl.textContent = oldName;
+      document.title = oldName + ' — Dashboard';
+      showToast('Could not rename project: ' + err.message, true);
+    }
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')  { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
 }
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────

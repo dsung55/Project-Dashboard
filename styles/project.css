@@ -50,6 +50,27 @@
   font-weight:    700;
   letter-spacing: -0.5px;
   margin-bottom:  4px;
+  margin-left:    -6px;            /* offset padding so text stays aligned */
+  padding:        0 6px;
+  border-radius:  8px;
+  cursor:         text;
+  transition:     background 120ms ease;
+}
+
+/* Subtle hover hint that the name is editable */
+.project-name:hover { background: rgba(0, 0, 0, 0.04); }
+[data-theme="dark"] .project-name:hover { background: rgba(255, 255, 255, 0.06); }
+
+/* Inline rename input — matches the heading's type so it doesn't jump */
+.project-name-input {
+  font:           inherit;
+  letter-spacing: inherit;
+  color:          var(--text-primary);
+  background:     transparent;
+  border:         none;
+  outline:        none;
+  padding:        0;
+  width:          100%;
 }
 
 .project-meta {

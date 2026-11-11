@@ -534,15 +534,18 @@ body {
   font-weight: 500;
 }
 
-/* Current task label on card */
+/* Current task label on card — wraps onto multiple lines (up to 5) so long tasks stay readable */
 .card-current-task {
-  font-size:     15px;
-  color:         var(--text-secondary);
-  white-space:   nowrap;
-  overflow:      hidden;
-  text-overflow: ellipsis;
-  min-height:    20px;
-  margin-top:    auto;
+  font-size:          15px;
+  line-height:        1.4;
+  color:              var(--text-secondary);
+  overflow-wrap:      anywhere;
+  display:            -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow:           hidden;
+  min-height:         20px;
+  margin-top:         auto;
 }
 
 /* Card footer row containing the 3-dot menu */
