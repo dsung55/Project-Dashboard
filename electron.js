@@ -177,9 +177,13 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     // Renderer's "Restart Now" button sends this — apply the downloaded update immediately.
+    // isSilent=true, isForceRunAfter=false: NSIS installs quietly but does NOT relaunch the app.
+    // This prevents a race where NSIS relaunches a new instance before the old process has fully
+    // exited and released the single-instance lock, which caused the app to silently quit on open.
+    // The user relaunches normally from the shortcut after the install completes.
     ipcMain.on('restart-app', () => {
       log.info('[updater] user requested restart-and-install');
-      autoUpdater.quitAndInstall(true, true);
+      autoUpdater.quitAndInstall(true, false);
     });
 
     // Renderer's "Check for Updates" button (Settings page).

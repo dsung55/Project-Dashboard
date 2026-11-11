@@ -169,6 +169,13 @@
         <div class="section-heading">Update Log</div>
 
         <div class="update-log-entry">
+          <div class="update-log-version">v1.7.1</div>
+          <ul class="update-log-list">
+            <li>Fixed: app would not reopen after installing an auto-update — zombie processes from the NSIS installer were holding the single-instance lock, causing silent quit on every launch attempt</li>
+          </ul>
+        </div>
+
+        <div class="update-log-entry">
           <div class="update-log-version">v1.7.0</div>
           <ul class="update-log-list">
             <li>Move a task into a project — active tasks now have a hover icon that lets you send them to any project's task list</li>

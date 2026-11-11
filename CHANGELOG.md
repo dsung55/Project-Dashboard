@@ -3,6 +3,10 @@
 > Entries are added only when a version number is specified. Content is auto-generated.
 > New entries go here AND in the Settings → Update Log tab in `settings.html`.
 
+## v1.7.1 — Update Relaunch Fix
+
+- **Fixed: app would not reopen after installing an auto-update.** The NSIS installer was relaunching the app before the old process had fully exited, leaving zombie processes that held Electron's single-instance lock — causing every subsequent launch to silently quit. The installer no longer force-relaunches; the app closes cleanly and you reopen it normally from the shortcut.
+
 ## v1.7.0 — Task Grouping & Move to Project
 
 - **Move a task into a project:** active tasks on the Tasks page now have a hover icon that opens a project picker — pick a project and the task is added to that project's task list and removed from the global list.

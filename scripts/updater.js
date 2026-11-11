@@ -17,11 +17,11 @@
         <div class="update-toast-icon">↑</div>
         <div class="update-toast-text">
           <strong>Update ready</strong>
-          <span>Restart to apply the latest version.</span>
+          <span>The app will close to install — relaunch it when done.</span>
         </div>
       </div>
       <div class="update-toast-actions">
-        <button class="update-toast-restart">Restart Now</button>
+        <button class="update-toast-restart">Install Now</button>
         <button class="update-toast-dismiss" aria-label="Dismiss">✕</button>
       </div>
     `;
